@@ -59,7 +59,7 @@ namespace CS422
 		}
 
 		private bool writeResponse(string status, string html){
-			string statusLine = String.Format (STATUS_LINE_FORMAT, HTTPVersion, NOT_FOUND_STATUS);
+			string statusLine = String.Format (STATUS_LINE_FORMAT, HTTPVersion, status);
 			string headers = "";
 
 			// Add Content-Type and Content-Length headers
