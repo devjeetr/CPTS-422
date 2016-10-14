@@ -42,7 +42,6 @@ namespace CS422
 		{
 			
 			threadPool = new SimpleLockThreadPool (nThreads);
-
 			Listener = new TcpListener (System.Net.IPAddress.Any, port);
 			listenerThread = new Thread(ListenProc);
 			Listener.Start ();
@@ -191,7 +190,7 @@ namespace CS422
 
 			Thread.CurrentThread.Abort ();
 		}
-
+		
 		static void ThreadWork(object clientObj){
 			TcpClient client = clientObj as TcpClient;
 			WebRequest request = BuildRequest (client);

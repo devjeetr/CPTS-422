@@ -49,9 +49,11 @@
       <Project>{5F4193C0-34A8-49B4-BB07-419F423CB296}</Project>
       <Name>ConcatStream</Name>
     </ProjectReference>
+
     <ProjectReference Include="..\..\ThreadPool\ThreadPool\ThreadPool.csproj">
       <Project>{85280771-0E44-4C63-B722-24B1478BEE2F}</Project>
       <Name>ThreadPool</Name>
     </ProjectReference>
+17c7e7cc1028ae0
   </ItemGroup>
 </Project>

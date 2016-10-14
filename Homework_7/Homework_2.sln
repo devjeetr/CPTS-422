@@ -25,5 +25,6 @@ Global
 		{85280771-0E44-4C63-B722-24B1478BEE2F}.Debug|x86.Build.0 = Debug|Any CPU
 		{85280771-0E44-4C63-B722-24B1478BEE2F}.Release|x86.ActiveCfg = Release|Any CPU
 		{85280771-0E44-4C63-B722-24B1478BEE2F}.Release|x86.Build.0 = Release|Any CPU
+
 	EndGlobalSection
 EndGlobal

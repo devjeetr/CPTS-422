@@ -1,0 +1,9 @@
+#User Specific
+*.userprefs
+*.usertasks
+
+*.exe
+*.mdb
+#Mono Project Files
+*.pidb
+*.resources
