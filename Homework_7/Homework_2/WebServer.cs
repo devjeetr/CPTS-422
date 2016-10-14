@@ -8,10 +8,10 @@ using System.Net.Sockets;
 using System.Collections.Generic;
 using System.Text;
 using System.Text.RegularExpressions;
-using System.Threading;
 using System.Collections.Concurrent;
 using System.IO;
 using System.Linq;
+using System.Threading;
 
 namespace CS422
 {
@@ -36,11 +36,13 @@ namespace CS422
 		private static List<WebService> services = new List<WebService> ();
 		private volatile static int processCount = 0;
 		private static volatile bool stopped = false;
+		private static SimpleLockThreadPool threadPool;
 
 		public static bool Start(int port, int nThreads = 64)
 		{
 			
-			ThreadPool.SetMinThreads (nThreads, nThreads);
+			threadPool = new SimpleLockThreadPool (nThreads);
+
 			Listener = new TcpListener (System.Net.IPAddress.Any, port);
 			listenerThread = new Thread(ListenProc);
 			Listener.Start ();
@@ -60,7 +62,7 @@ namespace CS422
 					TcpClient client = Listener.AcceptTcpClient ();
 					Console.WriteLine ("Client accepted!");
 
-					ThreadPool.QueueUserWorkItem(ThreadWork, client);
+					threadPool.QueueUserWorkItem(ThreadWork, client);
 
 				}
 			}
@@ -185,9 +187,11 @@ namespace CS422
 			if(Listener != null)
 				Listener.Stop ();
 			Listener = null;
-			//TODO implement this
+			threadPool.Dispose ();
+
 			Thread.CurrentThread.Abort ();
 		}
+
 		static void ThreadWork(object clientObj){
 			TcpClient client = clientObj as TcpClient;
 			WebRequest request = BuildRequest (client);

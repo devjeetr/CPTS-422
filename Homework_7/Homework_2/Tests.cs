@@ -27,18 +27,21 @@ namespace CS422
 		static void stopServer(){
 			var start = DateTime.Now ;
 			var secondsElapsed = (DateTime.Now - start).TotalSeconds;
-			while(((secondsElapsed = (DateTime.Now - start).TotalSeconds) <= 10)){
+			while(((secondsElapsed = (DateTime.Now - start).TotalSeconds) <= 30)){
 
 			}
 			Console.WriteLine ("Stopping server");
 			WebServer.Stop();
-			Thread.CurrentThread.Abort ();
+//			Thread.CurrentThread.Abort ();
 		}
 		//[Test()]
 		public void TestServer(){
 
 		}
 
+		public void WebServer_OnSlowRequest_TimesOut(){
+			
+		}
 	}
 }
 
