@@ -20,9 +20,9 @@ namespace CS422
 			WebServer.AddService (new DemoService ());
 			WebServer.Start (8080, 64);
 
-			Thread newThread = new Thread (stopServer);
-
-			newThread.Start ();
+//			Thread newThread = new Thread (stopServer);
+//
+//			newThread.Start ();
 		}
 		static void stopServer(){
 			var start = DateTime.Now ;

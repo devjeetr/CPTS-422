@@ -19,6 +19,7 @@ namespace CS422
 	{
 		private const string STUDENT_ID = "11404808";
 		private const string CRLF = @"\r\n";
+
 		private const string DEFAULT_TEMPLATE =
 			"HTTP/1.1 200 OK\r\n" +
 			"Content-Type: text/html\r\n" +
@@ -26,11 +27,22 @@ namespace CS422
 			"<html>ID Number: {0}<br>" +
 			"DateTime.Now: {1}<br>" +
 			"Requested URL: {2}</html>";
+
+		// Timeout constants
+		private const int DEFAULT_NETWORK_READ_TIMEOUT = 3;
+		private const int DOUBLE_CRLF_TIMEOUT = 10;
+		private const int FIRST_CRLF_DATA_TIMEOUT = 5;
+		private const int DOUBLE_CRLF_DATA_TIMEOUT = 100 * 1024;
+
+
+		// Regex, const and format strings for html
 		private const string URL_REGEX_PATTERN = @"(\/.*).*";
 		private const string HTTP_VERSION = "HTTP/1.1";
 		private const string HEADER_REGEX_PATTERN = @"(.*):(.*)";
 		private const string GET_REQUEST_STRING = "GET";
 
+
+		// Thread stuff
 		private static Thread listenerThread;
 		private volatile static TcpListener Listener;
 		private static List<WebService> services = new List<WebService> ();
@@ -79,7 +91,9 @@ namespace CS422
 		private static WebRequest BuildRequest(TcpClient client){
 			WebRequest newWebRequest = new WebRequest (client.GetStream());
 			ConcatStream bodyStream = null;
+
 			Console.WriteLine("Building Request...");
+
 			List<byte> bufferedRequest = new List<byte>();
 			bool done = false;
 			int length = -1;
@@ -87,22 +101,75 @@ namespace CS422
 			while(!done){
 
 				NetworkStream networkStream = client.GetStream ();
-
+				networkStream.ReadTimeout = DEFAULT_NETWORK_READ_TIMEOUT;
 				int available = client.Available;
 
-				while(client.Available > 0)
+				var watch = System.Diagnostics.Stopwatch.StartNew();
+				// the code that you want to measure comes here
+
+
+				while(true)
 				{ 
 					byte[] buf = new byte[client.Available];
-					networkStream.Read(buf,0,client.Available);
+					try{
+						//Console.WriteLine("About to read");
+						networkStream.Read(buf,0,client.Available);
+					}catch(IOException e){
+						//Console.WriteLine ("Timing out: Read timeout");
+
+						client.Close ();
+						//listener.Stop ();
+						watch.Stop();
+						return null;
+					}
+					//Console.WriteLine ("read finsihd");
 					bufferedRequest.AddRange(buf);
 
 					string request  = System.Text.ASCIIEncoding.UTF8.GetString(bufferedRequest.ToArray());
 
+					//check timeout #2
+					var elapsedSeconds = watch.ElapsedMilliseconds / 1000.0;
+
+					//Console.WriteLine ("Time elapsed: {0}\rss\n", elapsedSeconds);
+
 					if(!isValidRequest(bufferedRequest)){
 						client.Close ();
 						//listener.Stop ();
-
+						watch.Stop();
 						return null;
+					}
+
+					// check single crlf timeout
+					if(bufferedRequest.Count > FIRST_CRLF_DATA_TIMEOUT 
+						&& !request.Contains(@"\r\n")){
+						Console.WriteLine ("Timing out: First CRLF not found in first {0} bytes", 
+							bufferedRequest.Count);
+
+						//time out!!
+						// close socket and return
+						client.Close ();
+						return null;
+					}
+
+
+					// check for double crlf timeouts
+					if (elapsedSeconds >= DOUBLE_CRLF_TIMEOUT 
+						|| bufferedRequest.Count > DOUBLE_CRLF_DATA_TIMEOUT) {
+						if (!request.Contains (@"\r\n\r\n")) {
+							if(elapsedSeconds >= DOUBLE_CRLF_TIMEOUT)
+								Console.WriteLine ("Timing out: Double CRLF not found in {0} seconds", 
+									elapsedSeconds);
+							else
+								Console.WriteLine ("Timing out: Double CRLF not found in first {0} bytes", 
+									bufferedRequest.Count);
+							
+							//time out!!
+							// close socket and return
+							client.Close ();
+
+							return null;
+						}
+					
 					}
 
 					if (request.Length >= 4 && request.Contains (@"\r\n\r\n")) {
@@ -111,6 +178,8 @@ namespace CS422
 						break;
 					} 
 				}
+
+
 				var reqString  = System.Text.ASCIIEncoding.UTF8.GetString(bufferedRequest.ToArray());
 				if (length == -1 && reqString.Split (new String[] { CRLF}, 
 					StringSplitOptions.None).Length > 2) {
