@@ -295,11 +295,6 @@ namespace CS422
 			if (request == null) {
 				client.Close ();
 				Console.WriteLine("Closing connection");
-				processCount--;
-				if (processCount == 0 && stopped)
-					Terminate ();
-				Console.WriteLine ("process: {0}", processCount);
-
 				return;
 			}
 
@@ -308,12 +303,15 @@ namespace CS422
 			if (handlerService == null) {
 				Console.WriteLine ("Handler not found, writing not found response");
 				request.WriteNotFoundResponse ("NoasdasdasdasdtFound");
+				client.GetStream ().Dispose ();
+				client.Close ();
 			} else {
 				Console.WriteLine ("Handler found, delegating response");
 				handlerService.Handler (request);
+				client.GetStream ().Dispose ();
+				client.Close ();
 			}
-			Console.WriteLine ("process: {0}", processCount);
-			processCount--;
+
 			client.Close ();
 		}
 

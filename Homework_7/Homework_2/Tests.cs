@@ -20,24 +20,35 @@ namespace CS422
 			WebServer.AddService (new DemoService ());
 			WebServer.Start (8080, 64);
 
-//			Thread newThread = new Thread (stopServer);
-//
-//			newThread.Start ();
-		}
-		static void stopServer(){
-			var start = DateTime.Now ;
-			var secondsElapsed = (DateTime.Now - start).TotalSeconds;
-
-			while(((secondsElapsed = (DateTime.Now - start).TotalSeconds) <= 30)){
-
-			}
-			Console.WriteLine ("Stopping server");
-			WebServer.Stop();
-		}
-		//[Test()]
-		public void TestServer(){
 
 		}
+		class context{
+			internal int processNumber;
+
+		};
+
+		public static void ThreadWorkTest(object obj){
+			context currentContext = obj as context;
+			//Console.WriteLine ("Inside thread {0}", currentContext.processNumber);
+		}
+
+		[Test()]
+		public void TestThreadPool(){
+			SimpleLockThreadPool pool = new SimpleLockThreadPool (64);
+			context curr = new context();
+
+				for (int i = 0; i < 10; i++) {
+					curr = new context();
+					curr.processNumber = i;
+					pool.QueueUserWorkItem (ThreadWorkTest, curr);
+				}
+
+			pool.Dispose ();
+
+
+		}
+
+
 
 		public void WebServer_OnSlowRequest_TimesOut(){
 			
