@@ -39,7 +39,7 @@ namespace CS422
 		private const string CONTENT_LENGTH_HEADER = "Content-Length";
 		private const string CONTENT_TYPE_HEADER = "Content-Type";
 		private const string CONTENT_TYPE_VALUE = "text/html";
-		private const string STATUS_LINE_FORMAT = "{0} {1}r\n";
+		private const string STATUS_LINE_FORMAT = "{0} {1}\r\n";
 		private const string HEADER_FORMAT = "{0}: {1}\r\n";
 		private const string RESPONSE_FORMAT = "{0} {1}\r\n\r\n{2}";
 
@@ -81,16 +81,16 @@ namespace CS422
 				if(headerKeys.ElementAt (headerKeys.Count () - 1) != "")
 					headers += String.Format (HEADER_FORMAT, headerKeys.ElementAt (headerKeys.Count () - 1), Headers [headerKeys.ElementAt (headerKeys.Count () - 1)]);
 			}
-			Console.WriteLine ("Response: {0}", String.Format (RESPONSE_FORMAT, statusLine, headers, html));
-			byte[] response = System.Text.Encoding.Unicode.GetBytes(String.Format (RESPONSE_FORMAT, statusLine, headers, html));
+			Console.WriteLine ("Response: \n\n{0}", String.Format (RESPONSE_FORMAT, statusLine, headers, html));
+			byte[] response = System.Text.Encoding.ASCII.GetBytes(String.Format (RESPONSE_FORMAT, statusLine, headers, html));
 			networkStream.Write (response, 0, response.Length);
-
+			networkStream.Close ();
 			return true;
 		}
 
 		public void Print(){
 			string statusLine = String.Format ("{0} {1} {2}", Method, RequestTarget, HTTPVersion);
-
+			
 			var headerKeys = Headers.Keys;
 			if (headerKeys.Count() == 0)
 				return;

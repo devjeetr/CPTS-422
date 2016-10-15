@@ -18,7 +18,8 @@ namespace CS422
 	class WebServer
 	{
 		private const string STUDENT_ID = "11404808";
-		private const string CRLF = @"\r\n";
+		private const string CRLF = "\r\n";
+		private const string DOUBLE_CRLF = "\r\n\r\n";
 
 		private const string DEFAULT_TEMPLATE =
 			"HTTP/1.1 200 OK\r\n" +
@@ -29,9 +30,9 @@ namespace CS422
 			"Requested URL: {2}</html>";
 
 		// Timeout constants
-		private const int DEFAULT_NETWORK_READ_TIMEOUT = 3;
+		private const int DEFAULT_NETWORK_READ_TIMEOUT = 3000;
 		private const int DOUBLE_CRLF_TIMEOUT = 10;
-		private const int FIRST_CRLF_DATA_TIMEOUT = 5;
+		private const int FIRST_CRLF_DATA_TIMEOUT = 2048;
 		private const int DOUBLE_CRLF_DATA_TIMEOUT = 100 * 1024;
 
 
@@ -65,7 +66,7 @@ namespace CS422
 
 		private static void ListenProc(){
 			try{
-				
+
 				while(true){
 					if(Listener == null)
 						break;
@@ -110,38 +111,40 @@ namespace CS422
 
 				while(true)
 				{ 
-					byte[] buf = new byte[client.Available];
+					// wait till client is available
+					//while(client.Available != 0){}
+					Console.WriteLine("Client.available: {0}", client.Available);
+					int bufferSize = 1024;
+					int bytesRead = 0;
+					byte[] buf = new byte[bufferSize];
 					try{
+						
+						Console.WriteLine("Client.available: {0}", client.Available);
 						//Console.WriteLine("About to read");
-						networkStream.Read(buf,0,client.Available);
+						if(client.Available > 0){
+							bytesRead = networkStream.Read(buf,0,buf.Length);
+						}else{
+							Console.WriteLine("client not avail");
+							done = true;
+							break;
+						}
 					}catch(IOException e){
-						//Console.WriteLine ("Timing out: Read timeout");
+						Console.WriteLine ("Timing out: Read timeout");
 
 						client.Close ();
 						//listener.Stop ();
 						watch.Stop();
 						return null;
 					}
-					//Console.WriteLine ("read finsihd");
+					Console.WriteLine ("Bytes Read: {0}", bytesRead);
 					bufferedRequest.AddRange(buf);
-
-					string request  = System.Text.ASCIIEncoding.UTF8.GetString(bufferedRequest.ToArray());
-
-					//check timeout #2
-					var elapsedSeconds = watch.ElapsedMilliseconds / 1000.0;
-
-					//Console.WriteLine ("Time elapsed: {0}\rss\n", elapsedSeconds);
-
-					if(!isValidRequest(bufferedRequest)){
-						client.Close ();
-						//listener.Stop ();
-						watch.Stop();
-						return null;
-					}
-
+					string request = System.Text.ASCIIEncoding.UTF8.GetString (bufferedRequest.ToArray ());
+					Console.WriteLine ();
+					Console.WriteLine ("request:\n{0}", request);
+					Console.WriteLine ();
 					// check single crlf timeout
-					if(bufferedRequest.Count > FIRST_CRLF_DATA_TIMEOUT 
-						&& !request.Contains(@"\r\n")){
+					if (bufferedRequest.Count > FIRST_CRLF_DATA_TIMEOUT
+						&& !request.Contains (CRLF)) {
 						Console.WriteLine ("Timing out: First CRLF not found in first {0} bytes", 
 							bufferedRequest.Count);
 
@@ -151,32 +154,53 @@ namespace CS422
 						return null;
 					}
 
+					//check timeout #2
+					var elapsedSeconds = watch.ElapsedMilliseconds / 1000.0;
+
 
 					// check for double crlf timeouts
-					if (elapsedSeconds >= DOUBLE_CRLF_TIMEOUT 
+					if (elapsedSeconds >= DOUBLE_CRLF_TIMEOUT
 						|| bufferedRequest.Count > DOUBLE_CRLF_DATA_TIMEOUT) {
-						if (!request.Contains (@"\r\n\r\n")) {
-							if(elapsedSeconds >= DOUBLE_CRLF_TIMEOUT)
+						if (!request.Contains (DOUBLE_CRLF)) {
+							if (elapsedSeconds >= DOUBLE_CRLF_TIMEOUT)
 								Console.WriteLine ("Timing out: Double CRLF not found in {0} seconds", 
 									elapsedSeconds);
 							else
 								Console.WriteLine ("Timing out: Double CRLF not found in first {0} bytes", 
 									bufferedRequest.Count);
-							
+
 							//time out!!
 							// close socket and return
 							client.Close ();
 
 							return null;
 						}
-					
+
 					}
 
-					if (request.Length >= 4 && request.Contains (@"\r\n\r\n")) {
-						Console.WriteLine ("breaking inner");
-						done = true;
-						break;
-					} 
+
+					if (bufferedRequest.Count != 0) {
+						
+
+						//Console.WriteLine ("Time elapsed: {0}\rss\n", elapsedSeconds);
+
+						if (!isValidRequest (bufferedRequest)) {
+							client.Close ();
+							//listener.Stop ();
+							watch.Stop ();
+							return null;
+						}
+
+
+
+						if (request.Length >= 4 && request.Contains (DOUBLE_CRLF)) {
+							Console.WriteLine ("breaking inner");
+							done = true;
+							break;
+						} 
+					} else {
+						Console.WriteLine ("Empty input");
+					}
 				}
 
 
@@ -193,11 +217,13 @@ namespace CS422
 				}
 
 				if (done) {
+					if (bufferedRequest.Count <= 0)
+						return null;
 					// find part of body that has been read already
 					string reqStr = System.Text.ASCIIEncoding.UTF8.GetString (bufferedRequest.ToArray ());
 
-					int index = reqStr.IndexOf(@"\r\n\r\n");
-					var alreadyReadBody = reqStr.Substring (index + @"\r\n\r\n".Count());
+					int index = reqStr.IndexOf(DOUBLE_CRLF);
+					var alreadyReadBody = reqStr.Substring (index + DOUBLE_CRLF.Count());
 					Console.WriteLine ("Already: {0}", alreadyReadBody);
 					MemoryStream already = new MemoryStream (System.Text.ASCIIEncoding.UTF8.GetBytes(alreadyReadBody));
 					if (length != -1) {
@@ -212,7 +238,7 @@ namespace CS422
 			newWebRequest.Method = "GET";
 			string requestString = System.Text.ASCIIEncoding.UTF8.GetString(bufferedRequest.ToArray());
 			newWebRequest.Body = bodyStream;
-			string[] firstLine = requestString.Split (@"\r\n".ToCharArray()) [0].Split(' ');
+			string[] firstLine = requestString.Split (CRLF.ToCharArray()) [0].Split(' ');
 
 
 
@@ -288,9 +314,7 @@ namespace CS422
 			}
 			Console.WriteLine ("process: {0}", processCount);
 			processCount--;
-			if (processCount <= 0 && stopped)
-				Terminate ();
-			Thread.CurrentThread.Abort ();
+			client.Close ();
 		}
 
 
@@ -317,30 +341,33 @@ namespace CS422
 												StringSplitOptions.None);
 
 			// DEBUG
-
+			Console.WriteLine ();
+			Console.WriteLine ("first");
 			// process first line for request
 			if (requestLines.Length >= 1) {
+				Console.WriteLine ("sec");
 				if (!processFirstLine (requestLines [0]))
 					return false;
 			}
-
+			Console.WriteLine ("3");
 			// process headers
 			if (requestLines.Length >= 2) {
-			
+				Console.WriteLine ("4");
 				for(int i = 1; i < requestLines.Length; i++){
 				
 					if(requestLines[i]  != ""){
 						Regex r = new Regex(HEADER_REGEX_PATTERN);
-
+						Console.WriteLine ("5");
 						if ((!r.IsMatch (requestLines [i])) && 
 							(i < requestLines.Length - 1 
 								&& requestLines[i+1] == "")) {
 							return false;
 						}
+						Console.WriteLine ("6");
 					}	
 				}
 			}
-
+			Console.WriteLine ("7");
 			return true;
 		}
 
