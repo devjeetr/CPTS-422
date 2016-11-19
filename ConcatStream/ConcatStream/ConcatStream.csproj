@@ -42,9 +42,6 @@
     <Compile Include="ConcatStreamTests.cs" />
     <Compile Include="NoSeekMemoryStream.cs" />
     <Compile Include="NoSeekStreamTests.cs" />
-    <Compile Include="..\..\..\tmp\TestA.cs">
-      <Link>TestA.cs</Link>
-    </Compile>
   </ItemGroup>
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
 </Project>

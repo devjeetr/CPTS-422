@@ -142,6 +142,7 @@ namespace CS422
 				throw new ArgumentException(String.Format("ConcatStream.Read: Invalid count, Position={0}, Length={1}, Count={2}",
 					Position, Length, count));
 
+			resetPositions ();
 			int totalBytesRead = 0;
 
 			if (position < A.Length) {
@@ -166,6 +167,24 @@ namespace CS422
 			return totalBytesRead;
 		}
 
+		void resetPositions(){
+			
+			if (position >= A.Length) {
+				A.Seek (A.Length, SeekOrigin.Begin);
+				long remaining = position - A.Length;
+
+				if (remaining >= 0) {
+					if(B.CanSeek)
+						B.Seek (remaining, SeekOrigin.Begin);
+				}
+			} else {
+				if(B.CanSeek)
+					B.Seek(0, SeekOrigin.Begin);
+				
+				A.Seek (position, SeekOrigin.Begin);
+			}
+		}
+
 		public override void Write(byte[] buffer, int offset, int count){
 			if (!canWrite)
 				throw new NotSupportedException ();
@@ -174,7 +193,7 @@ namespace CS422
 				throw new ArgumentException ();
 			}
 
-		
+			resetPositions ();
 			// If this stream is fixed length, then 
 			// we must truncate 'count' to the length
 			if (this.fixedLength && position + count > Length)
