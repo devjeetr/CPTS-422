@@ -1,0 +1,15 @@
+Unhandled Exception:
+System.IO.IOException: An attempt was made to move the position before the beginning of the stream.
+  at System.IO.MemoryStream.Seek (Int64 offset, SeekOrigin loc) <0x7fc1b03c7b50 + 0x001a8> in :0 
+  at CS422.ConcatStream.Write (System.Byte[] buffer, Int32 offset, Int32 count) <0x41a1c3d0 + 0x0032b> in :0 
+  at EOFC.Testing.StreamTester.SRWExpandTests (System.IO.Stream s) <0x41a1df20 + 0x003f2> in :0 
+  at EOFC.Testing.StreamTester.TestStream (System.IO.Stream s, EOFC.Testing.StreamTestCaps caps, System.IO.TextWriter log) <0x41a1cac0 + 0x00123> in :0 
+  at WebServerSolGrade.MainClass.GradeHW12 (System.Type[] typesToGrade) <0x41a18ca0 + 0x00d27> in :0 
+  at WebServerSolGrade.MainClass.Main (System.String[] args) <0x41a15d60 + 0x000a3> in :0 
+[ERROR] FATAL UNHANDLED EXCEPTION: System.IO.IOException: An attempt was made to move the position before the beginning of the stream.
+  at System.IO.MemoryStream.Seek (Int64 offset, SeekOrigin loc) <0x7fc1b03c7b50 + 0x001a8> in :0 
+  at CS422.ConcatStream.Write (System.Byte[] buffer, Int32 offset, Int32 count) <0x41a1c3d0 + 0x0032b> in :0 
+  at EOFC.Testing.StreamTester.SRWExpandTests (System.IO.Stream s) <0x41a1df20 + 0x003f2> in :0 
+  at EOFC.Testing.StreamTester.TestStream (System.IO.Stream s, EOFC.Testing.StreamTestCaps caps, System.IO.TextWriter log) <0x41a1cac0 + 0x00123> in :0 
+  at WebServerSolGrade.MainClass.GradeHW12 (System.Type[] typesToGrade) <0x41a18ca0 + 0x00d27> in :0 
+  at WebServerSolGrade.MainClass.Main (System.String[] args) <0x41a15d60 + 0x000a3> in :0 

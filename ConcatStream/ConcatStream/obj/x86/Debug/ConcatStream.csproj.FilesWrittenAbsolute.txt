@@ -1,0 +1,5 @@
+/home/devjeetroy/Development/College/CS-422/ConcatStream/ConcatStream/obj/x86/Debug/.NETFramework,Version=v4.5.AssemblyAttribute.cs
+/home/devjeetroy/Development/College/CS-422/ConcatStream/ConcatStream/bin/Debug/ConcatStream.exe.mdb
+/home/devjeetroy/Development/College/CS-422/ConcatStream/ConcatStream/bin/Debug/ConcatStream.exe
+/home/devjeetroy/Development/College/CS-422/ConcatStream/ConcatStream/obj/x86/Debug/ConcatStream.exe
+/home/devjeetroy/Development/College/CS-422/ConcatStream/ConcatStream/obj/x86/Debug/ConcatStream.exe.mdb
