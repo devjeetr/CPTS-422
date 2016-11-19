@@ -14,7 +14,7 @@ namespace CS422
 		public ConcatStream(Stream first, Stream second){
 			if(first == null || second == null)
 				throw new ArgumentException("null stream passed to ConcatStream(Stream, Stream)");
-			Console.WriteLine(first.CanSeek);
+
 			if(!first.CanSeek)
 				throw new ArgumentException("Length property not found in first stream");
 
@@ -197,7 +197,7 @@ namespace CS422
 				bufferCounter += bytesToWrite;
 				position += bytesToWrite;
 
-				Console.WriteLine ("Bytes Written: {0}, A.len: {1}, Position: {2}", bytesToWrite, A.Length, Position);
+				//Console.WriteLine ("Bytes Written: {0}, A.len: {1}, Position: {2}", bytesToWrite, A.Length, Position);
 			}
 
 			// TODO: 
@@ -209,13 +209,13 @@ namespace CS422
 					if (!B.CanSeek)
 						throw new ArgumentException ("Unable to write to B");
 					else {
-						Console.WriteLine ("Position: {0}, A.len: {1}", position, A.Length);
+						//Console.WriteLine ("Position: {0}, A.len: {1}", position, A.Length);
 						B.Seek (position - A.Length, SeekOrigin.Begin);
 					}
 				} 
 				B.Write (buffer, Convert.ToInt32(bufferCounter), count);
 				position += count;
-				Console.WriteLine ("Bytes written to b: {0}, Position: {1}, byffer: {2}", count, position, bufferCounter);
+				//Console.WriteLine ("Bytes written to b: {0}, Position: {1}, byffer: {2}", count, position, bufferCounter);
 			}
 
 		}
@@ -235,9 +235,9 @@ namespace CS422
 				position += offset;
 				break;
 			case SeekOrigin.End: 
-				Console.WriteLine ("Length: {0}, offset: {1}", Length, offset);
+				//Console.WriteLine ("Length: {0}, offset: {1}", Length, offset);
 				position = Length + offset;
-				Console.WriteLine ("Position: {0}", position);
+				//Console.WriteLine ("Position: {0}", position);
 				break;
 			}
 

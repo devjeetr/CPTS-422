@@ -3,15 +3,23 @@ using NUnit.Framework;
 using System.IO;
 using System;
 using System.Net.Sockets;
+using System.Linq;
 
 namespace CS422{
 	[TestFixture()]
 	class ConcatStreamUnitTests{
-		const string TEST_STRING_A = "jk;lkl;i";
-		const string TEST_STRING_B = "asdhgasdghafdghghasdfgafsdhgfkashjdf";
+		private string TEST_STRING_A = RandomString (200);
+		private string TEST_STRING_B = RandomString (5000);
+		private static Random r = new Random();
 
+
+		/////////////////////////////////////////////////////////////////////
+		///
+		/// 					stream.Read() Tests
+		/// 
+		////////////////////////////////////////////////////////////////////
 		[Test()]
-		public void TestRead(){
+		public void TestReadBasic(){
 			Stream a = new MemoryStream(), b = new MemoryStream();
 			string toWrite = "Asdasd";
 
@@ -105,7 +113,6 @@ namespace CS422{
 		 * ConcatStream	unit	test	that	combines	two	memory	streams,	reads	back	all	the	data	in	random
 		 * chunk	sizes,	and	verifies	it	against	the	original	data
 		 * */
-
 		[Test()]
 		public void Read_FragmentedReading_BytesReadInCorrectOrder(){
 			
@@ -119,10 +126,9 @@ namespace CS422{
 
 			int count = Convert.ToInt32(a.Length + b.Length);
 			int offset = 0;
-			Random random = new Random ();
 
 			while (count > 0) {
-				int randCount = random.Next (0, count + 1);
+				int randCount = r.Next (0, count + 1);
 				int bytesRead = c.Read (actual, offset, randCount);
 				offset += bytesRead;
 				count -= randCount;
@@ -149,10 +155,9 @@ namespace CS422{
 
 			int count = Convert.ToInt32(a.Length + bBuf.Length);
 			int offset = 0;
-			Random random = new Random ();
 
 			while (count > 0) {
-				int randCount = random.Next (0, count + 1);
+				int randCount = r.Next (0, count + 1);
 				int bytesRead = c.Read (actual, offset, randCount);
 				offset += bytesRead;
 				count -= randCount;
@@ -189,6 +194,11 @@ namespace CS422{
 		}
 
 
+		/////////////////////////////////////////////////////////////////////
+		///
+		/// 					stream.Write() Tests
+		/// 
+		////////////////////////////////////////////////////////////////////
 		[Test()]
 		public void Write_FragmentedWriting_BytesReadInCorrectOrder(){
 
@@ -208,12 +218,10 @@ namespace CS422{
 
 			int count = Convert.ToInt32(expected.Length);
 			int offset = 0;
-			Random random = new Random ();
 
 			while (count > 0) {
 
-				int randCount = random.Next (0, count + 1);
-				Console.WriteLine ("offset: {0}, count: {1}", offset, randCount);
+				int randCount = r.Next (0, count + 1);
 				c.Write (expected, offset, randCount);
 				offset += randCount;
 				count -= randCount;
@@ -226,7 +234,9 @@ namespace CS422{
 			Assert.AreEqual (expected, actual);
 		}
 
-
+		// this test can take some time, so uncomment
+		// the following line if you need
+		// [Ignore()]
 		[Test()]
 		public void Write_OnMultipleFragmentedWritesWithFirstStreamOfZeroLength_DataIsSavedProperly(){
 			string test = new string('x', 20000);
@@ -249,7 +259,6 @@ namespace CS422{
 
 			c.Seek (0, SeekOrigin.Begin);
 			c.Read (actual, 0, expected.Length);
-			Console.WriteLine ("actual: " + System.Text.Encoding.Unicode.GetString (actual));
 			Assert.AreEqual (expected, actual);
 		}
 
@@ -288,7 +297,7 @@ namespace CS422{
 
 		[Test()]
 		[ExpectedException(typeof(ArgumentException))]
-		public void Write_OnOverWriteWithFixedLength_StreamBehavesProperly(){
+		public void Write_OnOverWriteWithFixedLength_ExceptionThrown(){
 			byte[] aInitialExpected = System.Text.Encoding.Unicode.GetBytes (TEST_STRING_A);
 
 			MemoryStream a = new MemoryStream (aInitialExpected);
@@ -323,7 +332,7 @@ namespace CS422{
 
 		[Test()]
 		[ExpectedException(typeof(ArgumentException))]
-		public void Write_OnOverflowingWriteWithFixedLength_StreamDoesntExpand(){
+		public void Write_OnOverflowingWriteWithFixedLength_ExceptionThrown(){
 			byte[] aInitialExpected = System.Text.Encoding.Unicode.GetBytes (TEST_STRING_A);
 
 			MemoryStream a = new MemoryStream (aInitialExpected);
@@ -353,37 +362,12 @@ namespace CS422{
 			*/
 		}
 
-		[Test()]
-		public void Write_OnPositionMismatchWriteFails_StreamDoesntExpand(){
-			byte[] aInitialExpected = System.Text.Encoding.Unicode.GetBytes (TEST_STRING_A);
 
-			MemoryStream a = new MemoryStream (aInitialExpected);
-			MemoryStream b = new MemoryStream ();
-
-			ConcatStream stream = new ConcatStream (a, b, aInitialExpected.Length);
-
-			byte[] actual = new byte[a.Length];
-			stream.Read (actual, 0, actual.Length);
-
-			Assert.AreEqual (actual, aInitialExpected);
-			stream.Seek (0, SeekOrigin.Begin);
-			Assert.AreEqual (0, stream.Position);
-
-			byte[] aFinalExpected = System.Text.Encoding.Unicode.GetBytes (TEST_STRING_B);
-			//stream.Write (aFinalExpected, 0, aFinalExpected.Length);
-
-			//Assert.AreEqual (aInitialExpected.Length, stream.Position);
-
-			/*
-			actual = new byte[aFinalExpected.Length];
-
-			stream.Seek (0, SeekOrigin.Begin);
-			stream.Read (actual, 0, actual.Length);
-
-			Assert.AreEqual (aFinalExpected, actual);
-			*/
-		}
-
+		/////////////////////////////////////////////////////////////////////
+		///
+		/// 					Seek Tests
+		/// 
+		////////////////////////////////////////////////////////////////////
 		[Test()]
 		public void Seek_OnSeek_DifferentOffsetsWork(){
 			byte[] aInitialExpected = System.Text.Encoding.Unicode.GetBytes (TEST_STRING_A);
@@ -393,11 +377,19 @@ namespace CS422{
 
 			ConcatStream stream = new ConcatStream (a, b, aInitialExpected.Length);
 
+			stream.Seek (0, SeekOrigin.End);
+			Assert.AreEqual (stream.Length, stream.Position);
 
+			stream.Seek (-1 * stream.Length, SeekOrigin.Current);
+			Assert.AreEqual (0, stream.Position);
+
+
+			stream.Seek (stream.Length, SeekOrigin.Begin);
+			Assert.AreEqual (stream.Length, stream.Position);
 		}
 
 		[Test()]
-		public void Seek_OnSeekBeyondLengthPositive_PositionIsTruncated(){
+		public void Seek_OnSeekBeyondLengthPositive_PositionIsNotTruncated(){
 			byte[] aInitialExpected = System.Text.Encoding.Unicode.GetBytes (TEST_STRING_A);
 
 			MemoryStream a = new MemoryStream (aInitialExpected);
@@ -405,7 +397,10 @@ namespace CS422{
 
 			ConcatStream stream = new ConcatStream (a, b, aInitialExpected.Length);
 
+			int position = Convert.ToInt32(stream.Length) + r.Next (0, 2000);
 
+			stream.Seek (position, SeekOrigin.Begin);
+			Assert.AreEqual(position, stream.Position);
 		}
 
 		[Test()]
@@ -417,11 +412,16 @@ namespace CS422{
 
 			ConcatStream stream = new ConcatStream (a, b, aInitialExpected.Length);
 
-			a.Seek (a.Length + 200, SeekOrigin.Begin);
-			//Assert.AreEqual (a.Length, a.Position);
-			//a.Write (aInitialExpected, 0, aInitialExpected.Length);
+			stream.Seek (-20, SeekOrigin.Begin);
+			Assert.AreEqual (0, stream.Position);
 		}
 
+
+		/////////////////////////////////////////////////////////////////////
+		///
+		/// 					Set Length Tests
+		/// 
+		////////////////////////////////////////////////////////////////////
 		[Test()]
 		public void SetLength_WhenLengthLessThanFirstStreamLength_StreamIsTruncated(){
 			byte[] aInitialExpected = System.Text.Encoding.Unicode.GetBytes (TEST_STRING_A);
@@ -444,9 +444,71 @@ namespace CS422{
 			int bytesRead = stream.Read (aFinalActual, 0, Convert.ToInt32(stream.Length));
 			Assert.AreEqual (aFinalExpected.Length, bytesRead);
 			Assert.AreEqual (aFinalExpected, aFinalActual);
-			//a.Write (aInitialExpected, 0, aInitialExpected.Length);
 		}
 
+
+		// This test may take a while
+		// depending on nTestcases and max string length
+		[Test()]
+		[Ignore()]
+		public void SetLength_OnSetLengthAndWrite_DataIsCorrectlyWritten(){
+			const int N_TEST_CASES = 20;
+			const int MAX_STRING_LENGTH = int.MaxValue / 100;
+
+			for (int i = 0; i < N_TEST_CASES; i++) {
+				Console.WriteLine ("SetLength_OnSetLengthAndWrite_DataIsCorrectlyWritten i = {0}", i);
+
+				String randomString = RandomString (r.Next (0, MAX_STRING_LENGTH));
+				byte[] completeBuf = System.Text.Encoding.Unicode.GetBytes (randomString);                                                                                           
+
+				// now create two streams
+				int strALength = r.Next(0, randomString.Length);
+
+				String strA = randomString.Substring (0, strALength);
+				byte[] aBuf = System.Text.Encoding.Unicode.GetBytes (strA);
+
+				String strB = randomString.Substring (strALength);
+				byte[] bBuf = System.Text.Encoding.Unicode.GetBytes (strB);
+
+
+				Stream A = new MemoryStream (aBuf);
+				Stream B = new MemoryStream ();
+
+				ConcatStream concat = new ConcatStream (A, B);
+
+				concat.Seek (A.Length, SeekOrigin.Begin);
+
+				int bytesToWrite = bBuf.Length;
+
+
+				while (bytesToWrite > 0) {
+					int nBytesToWrite = r.Next (0, bytesToWrite + 1);
+
+					concat.Write (bBuf, bBuf.Length - bytesToWrite, nBytesToWrite);
+					bytesToWrite -= nBytesToWrite;
+				}
+
+				concat.Seek (0, SeekOrigin.Begin);
+				byte[] actual = new byte[concat.Length];
+
+				int nBytesRead = concat.Read (actual, 0, actual.Length);
+
+
+				Assert.AreEqual (completeBuf.Length, nBytesRead);
+				Assert.AreEqual (completeBuf, actual);
+
+			}
+		}
+
+
+
+		public static string RandomString(int length)
+		{
+			const string chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+
+			return new string(Enumerable.Repeat(chars, length)
+				.Select(s => s[r.Next(s.Length)]).ToArray());
+		}
 
 
 

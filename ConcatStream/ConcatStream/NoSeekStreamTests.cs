@@ -45,7 +45,7 @@ namespace CS422
 		 * */
 		[Test()]
 		[ExpectedException( typeof(NotSupportedException) )]
-		public void NetworkStream_AccessSeek_ExceptionThrown(){
+		public void NetworkStream_OnSeek_ExceptionThrown(){
 
 			byte[] bytes = System.Text.Encoding.Unicode.GetBytes (TEST_STRING);
 
@@ -64,6 +64,19 @@ namespace CS422
 
 			var x = stream.Length;
 		}
+
+		[Test()]
+		[ExpectedException( typeof(NotSupportedException) )]
+		public void NetworkStream_OnSetLength_ExceptionThrown(){
+
+			byte[] bytes = System.Text.Encoding.Unicode.GetBytes (TEST_STRING);
+
+			NoSeekMemoryStream stream = new NoSeekMemoryStream (bytes , 10, 5);
+
+			stream.SetLength (2000);
+		}
+
+
 
 		[Test()]
 		public void NetworkStream_QueryCanSeek_ReturnsFalse(){
