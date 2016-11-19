@@ -439,38 +439,6 @@ namespace CS422{
 			Assert.AreEqual (aFinalExpected, actual);
 		}
 
-		[Test()]
-		[ExpectedException(typeof(ArgumentException))]
-		public void Write_OnOverflowingWriteWithFixedLength_ExceptionThrown(){
-			byte[] aInitialExpected = System.Text.Encoding.Unicode.GetBytes (TEST_STRING_A);
-
-			MemoryStream a = new MemoryStream (aInitialExpected);
-			MemoryStream b = new MemoryStream ();
-
-			ConcatStream stream = new ConcatStream (a, b, aInitialExpected.Length);
-
-			byte[] actual = new byte[a.Length];
-			stream.Read (actual, 0, actual.Length);
-
-			Assert.AreEqual (actual, aInitialExpected);
-			stream.Seek (0, SeekOrigin.Begin);
-			Assert.AreEqual (0, stream.Position);
-
-			byte[] aFinalExpected = System.Text.Encoding.Unicode.GetBytes (TEST_STRING_B);
-			stream.Write (aFinalExpected, 0, aFinalExpected.Length);
-
-			Assert.AreEqual (aInitialExpected.Length, stream.Position);
-
-			/*
-			actual = new byte[aFinalExpected.Length];
-
-			stream.Seek (0, SeekOrigin.Begin);
-			stream.Read (actual, 0, actual.Length);
-
-			Assert.AreEqual (aFinalExpected, actual);
-			*/
-		}
-
 
 		/////////////////////////////////////////////////////////////////////
 		///
@@ -557,11 +525,11 @@ namespace CS422{
 
 
 		// This test may take a while
-		// depending on nTestcases and max string length
+		// depending on number of test cases
 		[Test()]
-		//[Ignore()]
+		[Ignore()]
 		public void SetLength_OnSetLengthAndWrite_DataIsCorrectlyWritten(){
-			const int N_TEST_CASES = 30;
+			const int N_TEST_CASES = 1;
 			const int MAX_STRING_LENGTH = int.MaxValue / 100;
 
 			for (int i = 0; i < N_TEST_CASES; i++) {
@@ -666,33 +634,68 @@ namespace CS422{
 			byte[] bytesToWrite = bytes (strToWrite);
 
 
-			/*
-			byte[] tmp;
-			int n;
-			C.Write (bytesToWrite, 0, bytesToWrite.Length);
-			tmp = new byte[C.Length];
-			Second.Seek (55, SeekOrigin.Begin);
-			C.Seek(0, SeekOrigin.Begin);
-		
-			n = C.Read (tmp, 0, Convert.ToInt32(C.Length));
-
-			//Assert.AreEqual (aBytes.Length + bytesToWrite.Length, n);
-			//Assert.AreEqual (tmp, aBytes.Concat(bytesToWrite).ToArray());
-
-			C.Position = 10000;
-
-			C.Write (bytesToWrite, 0, bytesToWrite.Length / 2);
-
-			C.Position = bytesToWrite.Length / 2;
-
-			C.Write (bytesToWrite, bytesToWrite.Length / 2, bytesToWrite.Length / 2);
-
-			//			Assert.AreEqual()
-			//Assert.Fail();
-
-*/
-
 		}
+
+		// Expand Tests
+		[Test()]
+		public void Write_DoesNotExpandWhenSecondStreamIsNotExpandable(){
+			String a = RandomString (1000);
+			byte[] aBytes = bytes(a);
+
+			String b = RandomString (1000);
+			byte[] bBytes = bytes(b);
+
+			String c = RandomString (4000);
+			byte[] cBytes = bytes(c);
+
+			MemoryStream First = new MemoryStream (aBytes);
+			MemoryStream Second = new MemoryStream (bBytes);
+
+			ConcatStream C = new ConcatStream (First, Second);
+
+			// double original buffer and try to expand
+			byte[] bytesToWrite = bytes(c);
+
+			C.Write (bytesToWrite, 0, bytesToWrite.Length);
+
+			byte[] actual = new byte[C.Length];
+			C.Seek (0, SeekOrigin.Begin);
+			C.Read (actual, 0, actual.Length);
+
+			Assert.AreEqual (aBytes.Length + bBytes.Length, C.Length);
+			Assert.AreEqual (bytes(c.Substring(0, 2000)), actual);
+		}
+
+		[Test()]
+		public void Write_DoesExpandWhenSecondStreamIsExpandable(){
+			String a = RandomString (1000);
+			byte[] aBytes = bytes(a);
+
+			String b = RandomString (1000);
+			//byte[] bBytes = bytes();
+
+			String c = RandomString (4000);
+			byte[] cBytes = bytes(c);
+
+			MemoryStream First = new MemoryStream (aBytes);
+			MemoryStream Second = new MemoryStream ();
+
+			ConcatStream C = new ConcatStream (First, Second);
+
+			// double original buffer and try to expand
+			byte[] bytesToWrite = bytes(c);
+
+			C.Write (bytesToWrite, 0, bytesToWrite.Length);
+
+			byte[] actual = new byte[C.Length];
+			C.Seek (0, SeekOrigin.Begin);
+			C.Read (actual, 0, actual.Length);
+
+			Assert.AreEqual (cBytes.Length, C.Length);
+			Assert.AreEqual (cBytes, actual);
+		}
+
+
 
 		public static byte[] bytes(string s){
 			return System.Text.Encoding.Unicode.GetBytes (s);

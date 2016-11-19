@@ -41,6 +41,7 @@ namespace CS422
 			fixedLength = false;
 		}
 
+
 		public ConcatStream(Stream first, Stream second, long fixedLen){
 			if(first == null || second == null || fixedLen < 0)
 				throw new ArgumentException("null stream passed to ConcatStream(Stream, Stream)");
@@ -62,7 +63,6 @@ namespace CS422
 		}
 
 		// Properties
-
 		public override long Position {
 			get{ 
 				return position;
@@ -193,14 +193,16 @@ namespace CS422
 				throw new NotSupportedException ();
 
 			if (buffer.Length < offset + count) {
-				throw new ArgumentException ();
+				throw new ArgumentException ("invalid buffer offset and count");
 			}
 
 			resetPositions ();
 			// If this stream is fixed length, then 
 			// we must truncate 'count' to the length
-			if (this.fixedLength && position + count > Length)
+			/*if ()
 				throw new ArgumentException ("Expanding not supported on fixed length stream");
+			*/
+			// if B is not expandable
 
 			// Position = A.Position  + B.Position here
 			int bufferCounter = offset;
@@ -217,8 +219,6 @@ namespace CS422
 				count -= Convert.ToInt32(bytesToWrite);
 				bufferCounter += bytesToWrite;
 				position += bytesToWrite;
-
-				//Console.WriteLine ("Bytes Written: {0}, A.len: {1}, Position: {2}", bytesToWrite, A.Length, Position);
 			}
 
 			// TODO: 
@@ -230,14 +230,25 @@ namespace CS422
 					if (!B.CanSeek)
 						throw new ArgumentException ("Unable to write to B");
 					else {
-						//Console.WriteLine ("Position: {0}, A.len: {1}", position, A.Length);
-
 						B.Seek (position - A.Length, SeekOrigin.Begin);
 					}
-				} 
-				B.Write (buffer, Convert.ToInt32(bufferCounter), count);
+				}
+
+				// if B
+
+				try{
+					if(this.fixedLength && position + count > Length)
+						throw new NotSupportedException();
+					
+					Console.WriteLine (Convert.ToInt32 (B.Length - B.Position));
+					B.Write (buffer, Convert.ToInt32(bufferCounter), count);
+				} catch(NotSupportedException e){
+
+
+					B.Write (buffer, Convert.ToInt32(bufferCounter), Convert.ToInt32(B.Length - B.Position));
+				}
+
 				position += count;
-				//Console.WriteLine ("Bytes written to b: {0}, Position: {1}, byffer: {2}", count, position, bufferCounter);
 			}
 
 		}
@@ -248,7 +259,9 @@ namespace CS422
 		{
 			if (!CanSeek)
 				throw new NotSupportedException ("Seek operation not supported by ConcatStream");
-			
+
+			// set position according
+			// to the SeekOrigin provided
 			switch (origin) {
 			case SeekOrigin.Begin: 
 				position = offset;
@@ -275,15 +288,18 @@ namespace CS422
 				position = 0;
 
 			if (position < A.Length) {
+				// be sure to reset B's stream position
 				A.Seek (position, SeekOrigin.Begin);
 				B.Seek (0, SeekOrigin.Begin);
 			} else {
+				// edge case when A.length = 0
 				if(A.Length > 0)
 					A.Seek (A.Length - 1, SeekOrigin.Begin);
 
 				long seekPosition = position - A.Length;
 
-				if((seekPosition < B.Length))
+				// be sure to not seek past B's bounds
+				if(seekPosition < B.Length)
 					B.Seek (seekPosition, SeekOrigin.Begin);
 			}
 
