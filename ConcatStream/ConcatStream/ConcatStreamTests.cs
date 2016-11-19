@@ -228,10 +228,106 @@ namespace CS422{
 				Assert.AreEqual (offset, c.Position);
 			}
 
-			c.Seek (0, SeekOrigin.Begin);
+			//c.Seek (0, SeekOrigin.Begin);
+			c.Position = 0;
 			c.Read (actual, 0, expected.Length);
 			Console.WriteLine ("actual: " + System.Text.Encoding.Unicode.GetString (actual));
 			Assert.AreEqual (expected, actual);
+		}
+
+
+		[Test()]
+		public void SetLength_TestWrite_DataIsCorrectlyWritten(){
+			const int MAX_STRING_LENGTH = int.MaxValue / 100;
+
+			String randomString = RandomString (0);
+			byte[] completeBuf = System.Text.Encoding.Unicode.GetBytes (randomString);                                                                                           
+
+			// now create two streams
+			int strALength = r.Next(0, randomString.Length);
+
+			String strA = randomString.Substring (0, strALength);
+			byte[] aBuf = System.Text.Encoding.Unicode.GetBytes (strA);
+
+			String strB = randomString.Substring (strALength);
+			byte[] bBuf = System.Text.Encoding.Unicode.GetBytes (strB);
+
+
+			Stream A = new MemoryStream (0);
+			Stream B = new MemoryStream (aBuf);
+
+			ConcatStream concat = new ConcatStream (A, B);
+
+			concat.Seek (aBuf.Length, SeekOrigin.Begin);
+
+			int bytesToWrite = bBuf.Length;
+
+
+			while (bytesToWrite > 0) {
+				int nBytesToWrite = r.Next (0, bytesToWrite + 1);
+
+				concat.Write (bBuf, bBuf.Length - bytesToWrite, nBytesToWrite);
+				bytesToWrite -= nBytesToWrite;
+			}
+
+			concat.Seek (0, SeekOrigin.Begin);
+			byte[] actual = new byte[concat.Length];
+
+			int nBytesRead = concat.Read (actual, 0, actual.Length);
+
+
+			Assert.AreEqual (completeBuf.Length, nBytesRead);
+			Assert.AreEqual (completeBuf, actual);
+
+		}
+
+		[Test()]
+		[Ignore()]
+		public void Write_TestWriteOnOffset_DataIsCorrectlyWritten(){
+			const int MAX_STRING_LENGTH = int.MaxValue / 100;
+
+			String randomString = RandomString (10000 + MAX_STRING_LENGTH);
+			byte[] completeBuf = System.Text.Encoding.Unicode.GetBytes (randomString);                                                                                           
+
+			// now create two streams
+			int strALength = r.Next(0, randomString.Length);
+
+			string strBase = randomString.Substring (0, 10000);
+			byte[] baseBuf = System.Text.Encoding.Unicode.GetBytes (strBase);
+
+			String strA = randomString.Substring (10000, strALength);
+			byte[] aBuf = System.Text.Encoding.Unicode.GetBytes (strA);
+
+			String strB = randomString.Substring (strALength);
+			byte[] bBuf = System.Text.Encoding.Unicode.GetBytes (strB);
+
+
+			Stream A = new MemoryStream (baseBuf);
+			Stream B = new MemoryStream (aBuf);
+
+			ConcatStream concat = new ConcatStream (A, B);
+
+			concat.Seek (aBuf.Length, SeekOrigin.Begin);
+
+			int bytesToWrite = bBuf.Length;
+
+
+			while (bytesToWrite > 0) {
+				int nBytesToWrite = r.Next (0, bytesToWrite + 1);
+
+				concat.Write (bBuf, bBuf.Length - bytesToWrite, nBytesToWrite);
+				bytesToWrite -= nBytesToWrite;
+			}
+
+			concat.Seek (0, SeekOrigin.Begin);
+			byte[] actual = new byte[concat.Length];
+
+			int nBytesRead = concat.Read (actual, 0, actual.Length);
+
+
+			Assert.AreEqual (completeBuf.Length, nBytesRead);
+			Assert.AreEqual (completeBuf, actual);
+
 		}
 
 		// this test can take some time, so uncomment
@@ -452,7 +548,7 @@ namespace CS422{
 		[Test()]
 		[Ignore()]
 		public void SetLength_OnSetLengthAndWrite_DataIsCorrectlyWritten(){
-			const int N_TEST_CASES = 20;
+			const int N_TEST_CASES = 2;
 			const int MAX_STRING_LENGTH = int.MaxValue / 100;
 
 			for (int i = 0; i < N_TEST_CASES; i++) {
@@ -512,5 +608,34 @@ namespace CS422{
 
 
 
+		// Expand Tests
+		public void Write_ExpandsProperly(){
+			String a = RandomString (1000);
+			byte[] aBytes = bytes(a);
+
+
+			MemoryStream First = new MemoryStream (0);
+			MemoryStream Second = new MemoryStream (aBytes);
+
+			ConcatStream C = new ConcatStream (First, Second);
+
+			Assert.AreEqual (aBytes.Length, C.Length);
+
+
+			C.Seek (C.Length, SeekOrigin.Begin);
+
+			String strToWrite = RandomString (1000);
+			byte[] bytesToWrite = bytes (strToWrite);
+
+			C.Write (bytesToWrite, 0, bytesToWrite.Length);
+
+
+
+
+		}
+
+		public static byte[] bytes(string s){
+			return System.Text.Encoding.Unicode.GetBytes (s);
+		}
 	}
 }
