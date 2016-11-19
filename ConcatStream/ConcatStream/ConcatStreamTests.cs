@@ -136,7 +136,7 @@ namespace CS422{
 			NoSeekMemoryStream	as	the	second,	and	verifies	that	all	data	can	be	read
 		 * */
 		[Test()]
-		public void Read_NoSeekAndMemoryStreamCombined_BytesReadInCorrectOrder(){
+		public void Read_NoSeekAndMemoryStreamConcat_DataIsPreserved(){
 
 
 			MemoryStream a = new MemoryStream (System.Text.Encoding.Unicode.GetBytes(TEST_STRING_A));
@@ -196,10 +196,10 @@ namespace CS422{
 			MemoryStream a = new MemoryStream ();
 			MemoryStream b = new MemoryStream ();
 			ConcatStream c = new ConcatStream (a, b);
-			string test = "jhasdgfjklahdlkjfkjasdhfjhajkldsfhjkladsfklaskld;j;aklsdhfjkalhsdjkfhasjkldfhjkalshdfjklahsjkdfhajlsdhfkjlahsdfjklahsdafajklshdfjkalsdhf";
+			string test = "";
 
 			for (int i = 0; i < 10; i++) {
-				test += test;
+				test += TEST_STRING_B;
 			}
 
 
@@ -254,7 +254,7 @@ namespace CS422{
 		}
 
 		[Test()]
-		public void Write_OnOverWrite_StreamBehavesProperly(){
+		public void Write_OnOverWriteBoth_StreamBehavesProperly(){
 			byte[] aInitialExpected = System.Text.Encoding.Unicode.GetBytes (TEST_STRING_A);
 			MemoryStream a = new MemoryStream (aInitialExpected);
 			MemoryStream b = new MemoryStream ();
@@ -383,5 +383,72 @@ namespace CS422{
 			Assert.AreEqual (aFinalExpected, actual);
 			*/
 		}
+
+		[Test()]
+		public void Seek_OnSeek_DifferentOffsetsWork(){
+			byte[] aInitialExpected = System.Text.Encoding.Unicode.GetBytes (TEST_STRING_A);
+
+			MemoryStream a = new MemoryStream (aInitialExpected);
+			MemoryStream b = new MemoryStream ();
+
+			ConcatStream stream = new ConcatStream (a, b, aInitialExpected.Length);
+
+
+		}
+
+		[Test()]
+		public void Seek_OnSeekBeyondLengthPositive_PositionIsTruncated(){
+			byte[] aInitialExpected = System.Text.Encoding.Unicode.GetBytes (TEST_STRING_A);
+
+			MemoryStream a = new MemoryStream (aInitialExpected);
+			MemoryStream b = new MemoryStream ();
+
+			ConcatStream stream = new ConcatStream (a, b, aInitialExpected.Length);
+
+
+		}
+
+		[Test()]
+		public void Seek_OnSeekBeyondLengthNegative_PositionIsTruncated(){
+			byte[] aInitialExpected = System.Text.Encoding.Unicode.GetBytes (TEST_STRING_A);
+
+			MemoryStream a = new MemoryStream (aInitialExpected);
+			MemoryStream b = new MemoryStream ();
+
+			ConcatStream stream = new ConcatStream (a, b, aInitialExpected.Length);
+
+			a.Seek (a.Length + 200, SeekOrigin.Begin);
+			//Assert.AreEqual (a.Length, a.Position);
+			//a.Write (aInitialExpected, 0, aInitialExpected.Length);
+		}
+
+		[Test()]
+		public void SetLength_WhenLengthLessThanFirstStreamLength_StreamIsTruncated(){
+			byte[] aInitialExpected = System.Text.Encoding.Unicode.GetBytes (TEST_STRING_A);
+			byte[] aFinalExpected = System.Text.Encoding.Unicode.GetBytes (
+				TEST_STRING_A.Substring(0, TEST_STRING_A.Length / 2));
+			
+
+			MemoryStream a = new MemoryStream (aInitialExpected);
+			MemoryStream b = new MemoryStream ();
+
+			ConcatStream stream = new ConcatStream (a, b, aInitialExpected.Length);
+			int streamLength = Convert.ToInt32(stream.Length);
+
+			stream.SetLength (streamLength / 2);
+
+			Assert.AreEqual (a.Length, streamLength / 2);
+
+			stream.Seek (0, SeekOrigin.Begin);
+			byte[] aFinalActual = new byte[stream.Length];
+			int bytesRead = stream.Read (aFinalActual, 0, Convert.ToInt32(stream.Length));
+			Assert.AreEqual (aFinalExpected.Length, bytesRead);
+			Assert.AreEqual (aFinalExpected, aFinalActual);
+			//a.Write (aInitialExpected, 0, aInitialExpected.Length);
+		}
+
+
+
+
 	}
 }

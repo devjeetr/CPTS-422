@@ -65,8 +65,9 @@ namespace CS422
 				return position;
 			}
 
-			set{ 
-				Seek (value, SeekOrigin.Begin);
+			set{
+				position = value;
+				//	Seek (value, SeekOrigin.Begin);
 			}
 		}
 
@@ -78,18 +79,22 @@ namespace CS422
 			if (!lengthSupported)
 				throw new NotSupportedException ();
 
-			Console.WriteLine ("A: {0}, B: {1}", A.Length, B.Length);
 
-			if (len > A.Length && len <= B.Length) {
+			if (len > A.Length && len <= this.Length) {
 				int seekPosition = Convert.ToInt32 (len - A.Length);
 				B.SetLength (seekPosition);
-			} else {
-				Console.WriteLine ("hi");
+			} else if (len <= A.Length) {
+				A.SetLength (len);
+				B.SetLength (0);
+			} else if (len > this.Length) {
+				if (!fixedLength) {
+					// expand B to new size
+					B.SetLength(len - A.Length);
+				}
+					
 			}
 
 			this.length = len;
-			if (len != position)
-				Position = len;
 		}
 
 		public override bool CanRead{
@@ -236,10 +241,16 @@ namespace CS422
 				break;
 			}
 
-			// Now truncate position
-			if (position > Length)
-				position = Length;
+			// Don't truncate position because
+			// according to MSDN:
+			//
+			// "Seeking to any location beyond the length of the stream is supported."
+			// https://msdn.microsoft.com/en-us/library/system.io.stream.seek(v=vs.110).aspx
 
+			//if (position > Length)
+			//	position = Length;
+
+			// truncate negative values to 0
 			if (position < 0)
 				position = 0;
 
