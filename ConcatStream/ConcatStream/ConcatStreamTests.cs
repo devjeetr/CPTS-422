@@ -228,7 +228,6 @@ namespace CS422{
 
 
 		[Test()]
-		[Ignore("Ignore a fixture")]
 		public void Write_OnMultipleFragmentedWritesWithFirstStreamOfZeroLength_DataIsSavedProperly(){
 			string test = new string('x', 20000);
 			MemoryStream a = new MemoryStream (System.Text.Encoding.Unicode.GetBytes(test));
@@ -240,9 +239,6 @@ namespace CS422{
 			byte[] actual = new byte[expected.Length];
 
 			uint count = 0;
-			int offset = 0;
-			Random random = new Random ();
-
 			while (count < int.MaxValue) {
 				
 				c.Write (expected, 0, expected.Length);
@@ -290,8 +286,8 @@ namespace CS422{
 			Assert.AreEqual (aFinalExpected, actual);
 		}
 
-		[Ignore()]
 		[Test()]
+		[ExpectedException(typeof(ArgumentException))]
 		public void Write_OnOverWriteWithFixedLength_StreamBehavesProperly(){
 			byte[] aInitialExpected = System.Text.Encoding.Unicode.GetBytes (TEST_STRING_A);
 
@@ -326,6 +322,7 @@ namespace CS422{
 		}
 
 		[Test()]
+		[ExpectedException(typeof(ArgumentException))]
 		public void Write_OnOverflowingWriteWithFixedLength_StreamDoesntExpand(){
 			byte[] aInitialExpected = System.Text.Encoding.Unicode.GetBytes (TEST_STRING_A);
 

@@ -1,0 +1,13 @@
+HW12 Grader v1
+OK: Found type CS422.ConcatStream
+OK: Found type CS422.NoSeekMemoryStream
+OK: Basic read test #1
+OK: Basic read test #2
+OK: Created stream instance in ExpandTest1 with 2-param constructor
+OK: ExpandTest1
+Success: Stream length is positive and seek to beginning ok
+Success: Verified that buffers were not modified out of bounds during test
+Success: Verifed that stream passed to seek/read/write test function returns true for CanSeek, CanRead, and CanWrite.
+Success: Verified data with read/write at position 0.
+Success: Verified data with read/write at position 10000000.
+Success: Stream length matches expected value after writing and verifying all data.
