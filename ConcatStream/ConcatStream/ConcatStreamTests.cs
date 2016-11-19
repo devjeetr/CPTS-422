@@ -599,7 +599,7 @@ namespace CS422{
 						B.Position = r.Next (0, int.MaxValue);
 					} else {
 						A.Seek (r.Next (0, int.MaxValue), SeekOrigin.Begin);
-						B.Seek (r.Next (0, int.MaxValue), SeekOrigin.Current);
+						B.Seek (r.Next (0, int.MaxValue), SeekOrigin.Begin);
 					}
 
 					concat.Write (bBuf, bBuf.Length - bytesToWrite, nBytesToWrite);
