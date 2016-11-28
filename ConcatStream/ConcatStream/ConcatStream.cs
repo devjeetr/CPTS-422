@@ -17,7 +17,7 @@ namespace CS422
 		public ConcatStream(Stream first, Stream second){
 			if(first == null || second == null)
 				throw new ArgumentException("null stream passed to ConcatStream(Stream, Stream)");
-				
+
 			if(!first.CanSeek)
 				throw new ArgumentException("Length property not found in first stream");
 
@@ -32,8 +32,6 @@ namespace CS422
 			canSeek = first.CanSeek && second.CanSeek;
 			canRead = first.CanRead && second.CanRead;
 			canWrite = first.CanWrite && second.CanWrite;
-
-			first.can
 
 			A = first;
 			B = second;

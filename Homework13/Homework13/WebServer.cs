@@ -30,7 +30,7 @@ namespace CS422
 			"Requested URL: {2}</html>";
 
 		// Timeout constants
-		private const int DEFAULT_NETWORK_READ_TIMEOUT = 3000;
+		private const int DEFAULT_NETWORK_READ_TIMEOUT = 1000;
 		private const int DOUBLE_CRLF_TIMEOUT = 10;
 		private const int FIRST_CRLF_DATA_TIMEOUT = 2048;
 		private const int DOUBLE_CRLF_DATA_TIMEOUT = 100 * 1024;
@@ -112,6 +112,7 @@ namespace CS422
 				NetworkStream networkStream = client.GetStream ();
 				lock (networkStream) {
 					networkStream.ReadTimeout = DEFAULT_NETWORK_READ_TIMEOUT;
+
 					int available = client.Available;
 
 					var watch = System.Diagnostics.Stopwatch.StartNew();
@@ -126,16 +127,30 @@ namespace CS422
 						byte[] buf = new byte[bufferSize];
 						try{
 							//Console.WriteLine("Client.available: {0}", client.Available);
+							// while(!networkStream.DataAvailable){
+							// 	Console.WriteLine("Waiting");
+							// };
+							int i = 0;
+							if(networkStream.DataAvailable){
+							// if(client.Available > 0){
+								Console.WriteLine("client avail");
+								bytesRead = networkStream.Read(buf,i,buf.Length);
 
-							if(client.Available > 0){
-								bytesRead = networkStream.Read(buf,0,buf.Length);
-							}else{
-								//Console.WriteLine("client not avail");
-								//client.Close ();
-								done = true;
-								//break;
+								i += bytesRead;
+								
+
+								// if(){
+								// 	bytesRead = networkStream.Read(buf,i,buf.Length - i);
+								// 	Console.WriteLine("Bytes Read: {0}", bytesRead);
+								// }
 							}
-						}catch(IOException e){
+							// }else{
+							// 	Console.WriteLine("client not avail");
+							// 	//client.Close ();
+							// 	done = true;
+							// 	//break;
+							// }
+						}catch(TimeoutException e){
 							Console.WriteLine ("Timing out: Read timeout");
 
 							client.Close ();
@@ -143,64 +158,70 @@ namespace CS422
 							watch.Stop();
 							return null;
 						}
-						//Console.WriteLine ("Bytes Read: {0}", bytesRead);
+
+						
+						if(bytesRead > 0){
+						Console.WriteLine ("BytesRead: {0}", bytesRead);
 
 						bufferedRequest.AddRange(buf);
 
-						string request = System.Text.ASCIIEncoding.UTF8.GetString (bufferedRequest.ToArray ());
+							string request = System.Text.ASCIIEncoding.UTF8.GetString (bufferedRequest.ToArray ());
 
-						//Console.WriteLine ();
-						//Console.WriteLine ("request:\n{0}", request);
-						//Console.WriteLine ();
-						// check single crlf timeout
-						if (bufferedRequest.Count > FIRST_CRLF_DATA_TIMEOUT
-							&& !request.Contains (CRLF)) {
-							//Console.WriteLine ("Timing out: First CRLF not found in first {0} bytes", 
-								//bufferedRequest.Count);
+							//Console.WriteLine ();
+							Console.WriteLine ("request:\n{0}", request);
+							Console.WriteLine ();
+							// check single crlf timeout
+							if (bufferedRequest.Count > FIRST_CRLF_DATA_TIMEOUT
+								&& !request.Contains (CRLF)) {
+								Console.WriteLine ("Timing out: First CRLF not found in first {0} bytes", 
+									bufferedRequest.Count);
 
-							//time out!!
-							// close socket and return
-							client.Close ();
-							return null;
-						}
-
-						//check timeout #2
-						var elapsedSeconds = watch.ElapsedMilliseconds / 1000.0;
-
-
-						// check for double crlf timeouts
-						if (elapsedSeconds >= DOUBLE_CRLF_TIMEOUT
-							|| bufferedRequest.Count > DOUBLE_CRLF_DATA_TIMEOUT) {
-							if (!request.Contains (DOUBLE_CRLF)) {
-								if (elapsedSeconds >= DOUBLE_CRLF_TIMEOUT)
-									Console.WriteLine ("Timing out: Double CRLF not found in {0} seconds", 
-										elapsedSeconds);
-								else
-									Console.WriteLine ("Timing out: Double CRLF not found in first {0} bytes", 
-										bufferedRequest.Count);
-
-								return null;
-							}
-
-						}
-
-
-						if (bufferedRequest.Count != 0) {
-							//Console.WriteLine ("Count != 0: {0}", bufferedRequest.Count );
-							if (!isValidRequest (bufferedRequest)) {
+								//time out!!
+								// close socket and return
 								client.Close ();
-								//listener.Stop ();
-								watch.Stop ();
 								return null;
 							}
 
-							if (request.Length >= 4 && request.Contains (DOUBLE_CRLF)) {
-								//Console.WriteLine ("breaking inner");
-								done = true;
-								break;
-							} 
-						} else {
-							//Console.WriteLine ("Count = 0");
+							//check timeout #2
+							var elapsedSeconds = watch.ElapsedMilliseconds / 1000.0;
+
+
+							// check for double crlf timeouts
+							if (elapsedSeconds >= DOUBLE_CRLF_TIMEOUT
+								|| bufferedRequest.Count > DOUBLE_CRLF_DATA_TIMEOUT) {
+								if (!request.Contains (DOUBLE_CRLF)) {
+									if (elapsedSeconds >= DOUBLE_CRLF_TIMEOUT)
+										Console.WriteLine ("Timing out: Double CRLF not found in {0} seconds", 
+											elapsedSeconds);
+									else
+										Console.WriteLine ("Timing out: Double CRLF not found in first {0} bytes", 
+											bufferedRequest.Count);
+
+									return null;
+								}
+
+							}
+
+							if (bufferedRequest.Count != 0) {
+								var reqStrings  = System.Text.ASCIIEncoding.UTF8.GetString(bufferedRequest.ToArray());
+								Console.WriteLine ("Count != 0: {0}", reqStrings);
+								if (!isValidRequest (bufferedRequest)) {
+									Console.WriteLine("Invalid");
+									Console.WriteLine(reqStrings);
+									client.Close ();
+									//listener.Stop ();
+									watch.Stop ();
+									return null;
+								}
+
+								if (request.Length >= 4 && request.Contains (DOUBLE_CRLF)) {
+									Console.WriteLine ("breaking inner");
+									done = true;
+									break;
+								} 
+							} else {
+								Console.WriteLine ("Count = 0");
+							}
 						}
 					}
 
@@ -340,29 +361,32 @@ namespace CS422
 
 		private static bool isValidRequest(List<byte> requestBytes){
 
-			String request = System.Text.ASCIIEncoding.UTF8.GetString (requestBytes.ToArray());
-
+			String request = System.Text.ASCIIEncoding.ASCII.GetString (requestBytes.ToArray());
+			request = request.Trim();
 			String[] requestLines = request.Split(new String[] { CRLF}, 
 												StringSplitOptions.None);
 
 			// DEBUG
-			//Console.WriteLine ();
-			//Console.WriteLine ("first");
+			Console.WriteLine ();
+			Console.WriteLine(request.Length);
+
+			Console.WriteLine ("first");
 			// process first line for request
 			if (requestLines.Length >= 1) {
-				Console.WriteLine ("sec");
+				Console.WriteLine("2");
+				Console.WriteLine(requestLines[0]);
 				if (!processFirstLine (requestLines [0]))
 					return false;
 			}
-			//Console.WriteLine ("3");
+			Console.WriteLine ("3");
 			// process headers
 			if (requestLines.Length >= 2) {
-				//Console.WriteLine ("4");
+				Console.WriteLine ("4");
 				for(int i = 1; i < requestLines.Length; i++){
 				
 					if(requestLines[i]  != ""){
 						Regex r = new Regex(HEADER_REGEX_PATTERN);
-						//Console.WriteLine ("5");
+						Console.WriteLine ("5");
 						if ((!r.IsMatch (requestLines [i])) && 
 							(i < requestLines.Length - 1 
 								&& requestLines[i+1] == "")) {
@@ -372,7 +396,7 @@ namespace CS422
 					}	
 				}
 			}
-			//Console.WriteLine ("7");
+			Console.WriteLine ("7");
 			return true;
 		}
 
@@ -380,17 +404,24 @@ namespace CS422
 		private static bool processFirstLine(String line){
 
 			String[] tokens = line.Trim().Split (new char[]{ ' ' }, StringSplitOptions.None);
-
+			Console.WriteLine(tokens[0]);
+			Console.WriteLine("token length: {0}", tokens.Length);
 			if (tokens.Length > 3) {
 				return false;
 			}
-			if (!GET_REQUEST_STRING.Contains (tokens [0]))
+			if (!GET_REQUEST_STRING.Contains (tokens [0])){
+				Console.WriteLine("tokens[0].Length: {0}", tokens[0].Length);
+				Console.WriteLine(tokens[0]);
+				Console.WriteLine("!GET_REQUEST_STRING.Contains (tokens [0])");
 				return false;
+			}
 			if (tokens.Length == 2) {
 				Regex r = new Regex (URL_REGEX_PATTERN);
 
-				if (!r.IsMatch (tokens [1]))
+				if (!r.IsMatch (tokens [1])){
+					Console.WriteLine("tokens.Length == 2 && !r.IsMatch (tokens [1])");
 					return false;
+				}
 			}
 			if (tokens.Length == 3) {
 				if (!HTTP_VERSION.Contains (tokens [2]) && !tokens[2].Contains(HTTP_VERSION)) {

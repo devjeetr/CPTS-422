@@ -237,12 +237,13 @@ namespace CS422
 		}
 
 		string GetContentType(string fileName){
-			//Console.WriteLine ("Name: {0}", fileName);
+			Console.WriteLine ("Name: {0}", fileName);
 			string extension = Path.GetExtension (fileName);
 			//Console.WriteLine ("extension: {0}", extension);
 			for (int i = 0; i < CONTENT_FILE_TYPES.Length; i++) {
 				for (int j = 0; j < CONTENT_FILE_TYPES [i].Length; j++) {
 					if (CONTENT_FILE_TYPES [i] [j] == extension) {
+						Console.WriteLine( "{0}, {1}, {2}", CONTENT_FILE_TYPES [i] [j], extension, CONTENT_TYPES[i]);
 						return CONTENT_TYPES [i];
 					}
 

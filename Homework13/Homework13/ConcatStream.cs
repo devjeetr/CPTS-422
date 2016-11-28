@@ -1,27 +1,34 @@
-﻿using System;
+﻿// Devjeet Roy
+// 11404808
+
+using System;
 using System.IO;
 
 namespace CS422
 {
 	public class ConcatStream: Stream{
-
-		bool fixedLength = false;
-		Stream A;
-		Stream B;
-		bool canRead, canWrite, canSeek, lengthSupported;
-		long length;
+		private Stream A;
+		private Stream B;
+		private bool fixedLength = false;
+		private bool canRead, canWrite, canSeek, lengthSupported;
+		private long position;
+		private long length;
 
 		public ConcatStream(Stream first, Stream second){
+			if(first == null || second == null)
+				throw new ArgumentException("null stream passed to ConcatStream(Stream, Stream)");
 
 			if(!first.CanSeek)
 				throw new ArgumentException("Length property not found in first stream");
+
 			if (first.CanSeek && second.CanSeek) {
 				lengthSupported = true;
 				length = first.Length + second.Length;
 			} else {
 				lengthSupported = false;
 			}
-				
+
+
 			canSeek = first.CanSeek && second.CanSeek;
 			canRead = first.CanRead && second.CanRead;
 			canWrite = first.CanWrite && second.CanWrite;
@@ -29,16 +36,21 @@ namespace CS422
 			A = first;
 			B = second;
 
-			Position = 0;
+			position = 0;
 
 			fixedLength = false;
 		}
 
+
 		public ConcatStream(Stream first, Stream second, long fixedLen){
-			this.fixedLength = true;
+			if(first == null || second == null || fixedLen < 0)
+				throw new ArgumentException("null stream passed to ConcatStream(Stream, Stream)");
+
+
+			fixedLength = true;
 			lengthSupported = true;
 
-			Position = 0;
+			position = 0;
 			length = fixedLen;
 
 			A = first;
@@ -51,21 +63,40 @@ namespace CS422
 		}
 
 		// Properties
-
 		public override long Position {
-			get;
-			set;
+			get{ 
+				return position;
+			}
+
+			set{
+				Seek (value, SeekOrigin.Begin);
+			}
 		}
 
 		public override void Flush(){
 			throw new NotSupportedException ();
 		}
 
-		public override void SetLength(long length){
-			if (!lengthSupported || fixedLength)
+		public override void SetLength(long len){
+			if (!lengthSupported)
 				throw new NotSupportedException ();
-			
-			this.length = length;
+
+
+			if (len > A.Length && len <= this.Length) {
+				int seekPosition = Convert.ToInt32 (len - A.Length);
+				B.SetLength (seekPosition);
+			} else if (len <= A.Length) {
+				A.SetLength (len);
+				B.SetLength (0);
+			} else if (len > this.Length) {
+				if (!fixedLength) {
+					// expand B to new size
+					B.SetLength(len - A.Length);
+				}
+					
+			}
+
+			this.length = len;
 		}
 
 		public override bool CanRead{
@@ -90,6 +121,7 @@ namespace CS422
 			get{ 
 				if (!lengthSupported)
 					throw new NotSupportedException ();
+				
 				if (fixedLength)
 					return length;
 				else
@@ -98,7 +130,8 @@ namespace CS422
 		}
 
 		// Methods
-
+		// TODO
+		// Add support for fixed length property
 		public override int Read(byte[] buffer, int offset, int count)
 		{	
 			if (!canRead)
@@ -108,13 +141,14 @@ namespace CS422
 				throw new ArgumentException ();
 			}
 
-			if(lengthSupported && count > Position + Length)
+			if(lengthSupported && count + Position > Length)
 				throw new ArgumentException(String.Format("ConcatStream.Read: Invalid count, Position={0}, Length={1}, Count={2}",
 					Position, Length, count));
 
+			resetPositions ();
 			int totalBytesRead = 0;
 
-			if (Position < A.Length) {
+			if (position < A.Length) {
 				int available = Convert.ToInt32(A.Length - A.Position);
 				int bytesToRead = count > available ? available : count;
 
@@ -122,7 +156,7 @@ namespace CS422
 
 				count -= bytesToRead;
 				offset += bytesToRead;
-				Position += bytesRead;
+				position += bytesRead;
 				totalBytesRead += bytesRead;
 			}
 
@@ -130,10 +164,28 @@ namespace CS422
 			if (count > 0) {
 				int bytesRead = B.Read (buffer, offset, count);
 
-				Position += bytesRead;
+				position += bytesRead;
 				totalBytesRead += bytesRead;
 			}
 			return totalBytesRead;
+		}
+
+		void resetPositions(){
+			
+			if (position >= A.Length) {
+				A.Seek (A.Length, SeekOrigin.Begin);
+				long remaining = position - A.Length;
+
+				if (remaining >= 0) {
+					if(B.CanSeek)
+						B.Seek (remaining, SeekOrigin.Begin);
+				}
+			} else {
+				if(B.CanSeek)
+					B.Seek(0, SeekOrigin.Begin);
+				
+				A.Seek (position, SeekOrigin.Begin);
+			}
 		}
 
 		public override void Write(byte[] buffer, int offset, int count){
@@ -141,23 +193,32 @@ namespace CS422
 				throw new NotSupportedException ();
 
 			if (buffer.Length < offset + count) {
-				throw new ArgumentException ();
+				throw new ArgumentException ("invalid buffer offset and count");
 			}
+
+			resetPositions ();
+			// If this stream is fixed length, then 
+			// we must truncate 'count' to the length
+			/*if ()
+				throw new ArgumentException ("Expanding not supported on fixed length stream");
+			*/
+			// if B is not expandable
 
 			// Position = A.Position  + B.Position here
 			int bufferCounter = offset;
-			if (Position < A.Length) {
+
+			if (position < A.Length) {
 				int bytesAvailable = Convert.ToInt32(A.Length - A.Position);
 
+				// make sure we don't write more bytes than available
 				int bytesToWrite = bytesAvailable < count ? bytesAvailable : count;
 
+				A.Write(buffer, Convert.ToInt32(bufferCounter), Convert.ToInt32(bytesToWrite));
 
-
-				A.Write(buffer, bufferCounter, bytesToWrite);
-				count -= bytesToWrite;
+				// update counters
+				count -= Convert.ToInt32(bytesToWrite);
 				bufferCounter += bytesToWrite;
-				Position += bytesToWrite;
-				Console.WriteLine ("Bytes Written: {0}, A.len: {1}, Position: {2}", bytesToWrite, A.Length, Position);
+				position += bytesToWrite;
 			}
 
 			// TODO: 
@@ -165,47 +226,81 @@ namespace CS422
 			//	and if B can't seek, then throw an exception
 			//	else seek B to appropriate position
 			if (count > 0) {
-				if (Position - A.Length != B.Position) {
+				if (position - A.Length != B.Position) {
 					if (!B.CanSeek)
 						throw new ArgumentException ("Unable to write to B");
 					else {
-						Console.WriteLine ("Position: {0}, A.len: {1}", Position, A.Length);
-						B.Seek (Position - A.Length - 1, SeekOrigin.Begin);
+						B.Seek (position - A.Length, SeekOrigin.Begin);
 					}
-				} 
-				B.Write (buffer, bufferCounter, count);
-				Position += count;
-				Console.WriteLine ("Bytes written to b: {0}, Position: {1}, byffer: {2}", count, Position, bufferCounter);
+				}
+
+				// if B
+
+				try{
+					if(this.fixedLength && position + count > Length)
+						throw new NotSupportedException();
+					
+					Console.WriteLine (Convert.ToInt32 (B.Length - B.Position));
+					B.Write (buffer, Convert.ToInt32(bufferCounter), count);
+				} catch(NotSupportedException e){
+
+
+					B.Write (buffer, Convert.ToInt32(bufferCounter), Convert.ToInt32(B.Length - B.Position));
+				}
+
+				position += count;
 			}
+
 		}
 
+		// TODO
+		// add support for fixed length
 		public override long Seek(long offset, SeekOrigin origin)
 		{
 			if (!CanSeek)
 				throw new NotSupportedException ("Seek operation not supported by ConcatStream");
-			
+
+			// set position according
+			// to the SeekOrigin provided
 			switch (origin) {
 			case SeekOrigin.Begin: 
-				Position = offset;
+				position = offset;
 				break;
 			case SeekOrigin.Current: 
-				Position += offset;
+				position += offset;
 				break;
 			case SeekOrigin.End: 
-				Position = length - offset;
+				position = Length + offset;
 				break;
 			}
 
-			if (Position > Length || Position < 0)
-				throw new ArgumentException ("Invalid Seek offset");
+			// Don't truncate position because
+			// according to MSDN:
+			//
+			// "Seeking to any location beyond the length of the stream is supported."
+			// https://msdn.microsoft.com/en-us/library/system.io.stream.seek(v=vs.110).aspx
 
-			if (Position < A.Length) {
-				A.Seek (Position, SeekOrigin.Begin);
+			//if (position > Length)
+			//	position = Length;
+
+			// truncate negative values to 0
+			if (position < 0)
+				position = 0;
+
+			if (position < A.Length) {
+				// be sure to reset B's stream position
+				A.Seek (position, SeekOrigin.Begin);
 				B.Seek (0, SeekOrigin.Begin);
 			} else {
-				A.Seek (A.Length - 1, SeekOrigin.Begin);
+				// edge case when A.length = 0
+				if(A.Length > 0)
+					A.Seek (A.Length - 1, SeekOrigin.Begin);
 
-				B.Seek (Position - A.Length, SeekOrigin.Begin);
+				long seekPosition = position - A.Length;
+
+				// be sure to not seek past B's bounds
+				if(seekPosition < B.Length)
+					B.Seek (seekPosition, SeekOrigin.Begin);
 			}
 
 			return 0;	
