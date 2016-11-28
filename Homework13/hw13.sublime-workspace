@@ -3,6 +3,22 @@
 	{
 		"selected_items":
 		[
+			[
+				"Count",
+				"Count()\tint"
+			],
+			[
+				"Buffere",
+				"bufferedRequest\tList<byte>"
+			],
+			[
+				"UT",
+				"UTF8\tEncoding { get; }"
+			],
+			[
+				"req",
+				"requestLines\tstring[]"
+			]
 		]
 	},
 	"buffers":
@@ -11,7 +27,34 @@
 			"file": "hw13.sublime-project",
 			"settings":
 			{
-				"buffer_size": 45,
+				"buffer_size": 83,
+				"line_ending": "Unix"
+			}
+		},
+		{
+			"file": "Homework13/WebServer.cs",
+			"settings":
+			{
+				"buffer_size": 12062,
+				"encoding": "UTF-8 with BOM",
+				"line_ending": "Unix"
+			}
+		},
+		{
+			"file": "Homework13/FilesWebService.cs",
+			"settings":
+			{
+				"buffer_size": 7230,
+				"encoding": "UTF-8 with BOM",
+				"line_ending": "Unix"
+			}
+		},
+		{
+			"file": "Homework13/WebService.cs",
+			"settings":
+			{
+				"buffer_size": 437,
+				"encoding": "UTF-8 with BOM",
 				"line_ending": "Unix"
 			}
 		}
@@ -65,13 +108,14 @@
 	],
 	"file_history":
 	[
+		"/home/devjeetroy/Development/College/CS-422/Homework13/Homework13/ConcatStream.cs",
 		"/etc/init.d/rc.local",
 		"/home/devjeetroy/Development/College/CS-422/ConcatStream/ConcatStream/NoSeekMemoryStream.cs",
 		"/home/devjeetroy/Development/College/CS-422/ConcatStream/ConcatStream/ConcatStream.cs"
 	],
 	"find":
 	{
-		"height": 0.0
+		"height": 48.0
 	},
 	"find_in_files":
 	{
@@ -85,6 +129,15 @@
 		"case_sensitive": false,
 		"find_history":
 		[
+			"TCPListener",
+			"GET_REQU",
+			"processFirst",
+			"bytesRead",
+			"BufferedReque",
+			"sec",
+			"\"sec\"",
+			"\"sec",
+			"sec"
 		],
 		"highlight": true,
 		"in_selection": false,
@@ -102,7 +155,7 @@
 	"groups":
 	[
 		{
-			"selected": 0,
+			"selected": 1,
 			"sheets":
 			[
 				{
@@ -111,15 +164,15 @@
 					"semi_transient": false,
 					"settings":
 					{
-						"buffer_size": 45,
+						"buffer_size": 83,
 						"regions":
 						{
 						},
 						"selection":
 						[
 							[
-								20,
-								20
+								82,
+								82
 							]
 						],
 						"settings":
@@ -130,7 +183,136 @@
 						"translation.y": 0.0,
 						"zoom_level": 1.0
 					},
+					"stack_index": 1,
+					"type": "text"
+				},
+				{
+					"buffer": 1,
+					"file": "Homework13/WebServer.cs",
+					"semi_transient": false,
+					"settings":
+					{
+						"buffer_size": 12062,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								4258,
+								4258
+							]
+						],
+						"settings":
+						{
+							"oops":
+							{
+								"10010,10022": "Parameter can be IEnumerable",
+								"10046,10052": "Qualifier is redundant",
+								"10184,10187": "Redundant array creation expression",
+								"10188,10194": "Redundant explicit array type specification",
+								"10772,10777": "Use 'var' keyword",
+								"11193,11196": "Redundant array creation expression",
+								"11197,11201": "Redundant explicit array type specification",
+								"11655,11660": "Use 'var' keyword",
+								"126,131": "Using directive is not used by code and can be removed safely.",
+								"1411,1412": "Initializing field by default value is redundant",
+								"1445,1452": "Convert to constant",
+								"1455,1460": "Initializing field by default value is redundant",
+								"2567,2577": "Use 'var' keyword",
+								"2716,2720": "Use 'var' keyword",
+								"280,285": "Using directive is not used by code and can be removed safely.",
+								"3183,3193": "Convert to constant",
+								"323,332": "This class is recommended to be defined as static",
+								"3233,3237": "Use 'var' keyword",
+								"3458,3461": "Variable could be moved to a nested scope",
+								"4336,4342": "Qualifier is redundant",
+								"5554,5560": "Qualifier is redundant",
+								"6175,6181": "Qualifier is redundant",
+								"6290,6296": "Redundant explicit array type specification",
+								"6708,6714": "Qualifier is redundant",
+								"6805,6812": "'System.String.IndexOf' is culture-aware and missing a StringComparison argument",
+								"6893,6898": "Use of Linq method when there's a better alternative",
+								"6970,6982": "Use 'var' keyword",
+								"7011,7017": "Qualifier is redundant",
+								"7076,7078": "Convert to '?:' expression",
+								"7380,7386": "Qualifier is redundant",
+								"7649,7655": "Qualifier is redundant",
+								"7695,7696": "Empty statement is redundant",
+								"7903,7906": "Redundant array creation expression",
+								"7907,7913": "Redundant explicit array type specification",
+								"7960,7980": "Use 'var' keyword",
+								"8187,8192": "Use 'var' keyword",
+								"8765,8774": "Use 'var' keyword",
+								"8818,8824": "Using member of null value will cause a NullReferenceException",
+								"9892,9893": "'System.String.StartsWith' is culture-aware and missing a StringComparison argument"
+							},
+							"syntax": "Packages/C#/C#.sublime-syntax",
+							"translate_tabs_to_spaces": false
+						},
+						"translation.x": 0.0,
+						"translation.y": 2846.0,
+						"zoom_level": 1.0
+					},
 					"stack_index": 0,
+					"type": "text"
+				},
+				{
+					"buffer": 2,
+					"file": "Homework13/FilesWebService.cs",
+					"semi_transient": false,
+					"settings":
+					{
+						"buffer_size": 7230,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								6565,
+								6565
+							]
+						],
+						"settings":
+						{
+							"syntax": "Packages/C#/C#.sublime-syntax",
+							"translate_tabs_to_spaces": false
+						},
+						"translation.x": 30.0,
+						"translation.y": 3705.0,
+						"zoom_level": 1.0
+					},
+					"stack_index": 2,
+					"type": "text"
+				},
+				{
+					"buffer": 3,
+					"file": "Homework13/WebService.cs",
+					"semi_transient": false,
+					"settings":
+					{
+						"buffer_size": 437,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								0,
+								0
+							]
+						],
+						"settings":
+						{
+							"syntax": "Packages/C#/C#.sublime-syntax",
+							"translate_tabs_to_spaces": false
+						},
+						"translation.x": 0.0,
+						"translation.y": 0.0,
+						"zoom_level": 1.0
+					},
+					"stack_index": 3,
 					"type": "text"
 				}
 			]
@@ -138,7 +320,7 @@
 	],
 	"incremental_find":
 	{
-		"height": 0.0
+		"height": 26.0
 	},
 	"input":
 	{
@@ -177,13 +359,13 @@
 	},
 	"output.variable_get":
 	{
-		"height": 0.0
+		"height": 124.0
 	},
 	"pinned_build_system": "",
 	"project": "hw13.sublime-project",
 	"replace":
 	{
-		"height": 0.0
+		"height": 48.0
 	},
 	"save_all_on_build": true,
 	"select_file":

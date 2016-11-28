@@ -40,7 +40,7 @@ namespace CS422
 		private const string URL_REGEX_PATTERN = @"(\/.*).*";
 		private const string HTTP_VERSION = "HTTP/1.1";
 		private const string HEADER_REGEX_PATTERN = @"(.*):(.*)";
-		private const string GET_REQUEST_STRING = "GET";
+		private static string[] GET_REQUEST_STRING = new string[]{"GET", "PUT"};
 
 
 		// Thread stuff
@@ -126,30 +126,12 @@ namespace CS422
 						int bytesRead = 0;
 						byte[] buf = new byte[bufferSize];
 						try{
-							//Console.WriteLine("Client.available: {0}", client.Available);
-							// while(!networkStream.DataAvailable){
-							// 	Console.WriteLine("Waiting");
-							// };
-							int i = 0;
+							
 							if(networkStream.DataAvailable){
-							// if(client.Available > 0){
 								Console.WriteLine("client avail");
-								bytesRead = networkStream.Read(buf,i,buf.Length);
-
-								i += bytesRead;
-								
-
-								// if(){
-								// 	bytesRead = networkStream.Read(buf,i,buf.Length - i);
-								// 	Console.WriteLine("Bytes Read: {0}", bytesRead);
-								// }
+								int i = networkStream.Read(buf,bytesRead,buf.Length);
+								bytesRead += i;
 							}
-							// }else{
-							// 	Console.WriteLine("client not avail");
-							// 	//client.Close ();
-							// 	done = true;
-							// 	//break;
-							// }
 						}catch(TimeoutException e){
 							Console.WriteLine ("Timing out: Read timeout");
 
@@ -203,11 +185,7 @@ namespace CS422
 							}
 
 							if (bufferedRequest.Count != 0) {
-								var reqStrings  = System.Text.ASCIIEncoding.UTF8.GetString(bufferedRequest.ToArray());
-								Console.WriteLine ("Count != 0: {0}", reqStrings);
 								if (!isValidRequest (bufferedRequest)) {
-									Console.WriteLine("Invalid");
-									Console.WriteLine(reqStrings);
 									client.Close ();
 									//listener.Stop ();
 									watch.Stop ();
@@ -227,14 +205,13 @@ namespace CS422
 
 
 					var reqString  = System.Text.ASCIIEncoding.UTF8.GetString(bufferedRequest.ToArray());
+					
 					if (length == -1 && reqString.Split (new String[] { CRLF}, 
 						StringSplitOptions.None).Length > 2) {
 						//check for content length
 						var headers = parseHeaders(reqString);
 						if (headers.ContainsKey ("Content-Length")) {
-
 							length = int.Parse(headers ["Content-Length"]);
-
 						}
 					}
 
@@ -257,15 +234,17 @@ namespace CS422
 				}
 			}
 
-			// request has been buffered, now build it
-			newWebRequest.Method = "GET";
 			string requestString = System.Text.ASCIIEncoding.UTF8.GetString(bufferedRequest.ToArray());
+			// request has been buffered, now build it
 			newWebRequest.Body = bodyStream;
+			
 			string[] firstLine = requestString.Split (CRLF.ToCharArray()) [0].Split(' ');
-
+			
+			newWebRequest.Method = firstLine[0];
+			Console.WriteLine("Method: {0}", firstLine[0]);
 
 			newWebRequest.HTTPVersion = firstLine[2];
-			newWebRequest.RequestTarget = 			System.Uri.UnescapeDataString (firstLine [1]);;
+			newWebRequest.RequestTarget = System.Uri.UnescapeDataString (firstLine [1]);;
 			newWebRequest.Headers = parseHeaders (requestString);
 
 			return newWebRequest;
@@ -367,26 +346,26 @@ namespace CS422
 												StringSplitOptions.None);
 
 			// DEBUG
-			Console.WriteLine ();
-			Console.WriteLine(request.Length);
+			// Console.WriteLine ();
+			// Console.WriteLine(request.Length);
 
-			Console.WriteLine ("first");
+			// Console.WriteLine ("first");
 			// process first line for request
 			if (requestLines.Length >= 1) {
-				Console.WriteLine("2");
-				Console.WriteLine(requestLines[0]);
+				// Console.WriteLine("2");
+				// Console.WriteLine(requestLines[0]);
 				if (!processFirstLine (requestLines [0]))
 					return false;
 			}
-			Console.WriteLine ("3");
+			// Console.WriteLine ("3");
 			// process headers
 			if (requestLines.Length >= 2) {
-				Console.WriteLine ("4");
+				// Console.WriteLine ("4");
 				for(int i = 1; i < requestLines.Length; i++){
 				
 					if(requestLines[i]  != ""){
 						Regex r = new Regex(HEADER_REGEX_PATTERN);
-						Console.WriteLine ("5");
+						// Console.WriteLine ("5");
 						if ((!r.IsMatch (requestLines [i])) && 
 							(i < requestLines.Length - 1 
 								&& requestLines[i+1] == "")) {
@@ -396,30 +375,38 @@ namespace CS422
 					}	
 				}
 			}
-			Console.WriteLine ("7");
+			// Console.WriteLine ("7");
 			return true;
 		}
 
+		private static bool isValidMethod(String str){
+			foreach(string method in GET_REQUEST_STRING){
+				if(method.Contains(str)){
+					return false;
+				}
+			}
 
+			return true;
+		}
 		private static bool processFirstLine(String line){
 
 			String[] tokens = line.Trim().Split (new char[]{ ' ' }, StringSplitOptions.None);
-			Console.WriteLine(tokens[0]);
-			Console.WriteLine("token length: {0}", tokens.Length);
+			// Console.WriteLine(tokens[0]);
+			// Console.WriteLine("token length: {0}", tokens.Length);
 			if (tokens.Length > 3) {
 				return false;
 			}
-			if (!GET_REQUEST_STRING.Contains (tokens [0])){
-				Console.WriteLine("tokens[0].Length: {0}", tokens[0].Length);
-				Console.WriteLine(tokens[0]);
-				Console.WriteLine("!GET_REQUEST_STRING.Contains (tokens [0])");
+			if (isValidMethod(tokens [0])){
+				// Console.WriteLine("tokens[0].Length: {0}", tokens[0].Length);
+				// Console.WriteLine(tokens[0]);
+				// Console.WriteLine("!GET_REQUEST_STRING.Contains (tokens [0])");
 				return false;
 			}
 			if (tokens.Length == 2) {
 				Regex r = new Regex (URL_REGEX_PATTERN);
 
 				if (!r.IsMatch (tokens [1])){
-					Console.WriteLine("tokens.Length == 2 && !r.IsMatch (tokens [1])");
+					// Console.WriteLine("tokens.Length == 2 && !r.IsMatch (tokens [1])");
 					return false;
 				}
 			}

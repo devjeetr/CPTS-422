@@ -6,19 +6,57 @@ namespace CS422
 {
 	class FilesWebService: WebService
 	{
-		//  JPEG, PNG, PDF, MP4, TXT, HTML and XML files
+		private String UPLOAD_SCRIPT = @"<script>
+											function selectedFileChanged(fileInput, urlPrefix)
+											{
+											document.getElementById('uploadHdr').innerText = 'Uploading ' + fileInput.files[0].name + '...';
+											// Need XMLHttpRequest to do the upload
+											if (!window.XMLHttpRequest)
+											{
+											alert('Your browser does not support XMLHttpRequest. Please update your browser.');
+											return;
+											}
+											// Hide the file selection controls while we upload
+											var uploadControl = document.getElementById('uploader');
+											if (uploadControl)
+											{
+											uploadControl.style.visibility = 'hidden';
+											}
+											// Build a URL for the request
+											if (urlPrefix.lastIndexOf('/') != urlPrefix.length - 1)
+											{
+											urlPrefix += '/';
+											}
+											var uploadURL = urlPrefix + fileInput.files[0].name;
+											// Create the service request object
+											var req = new XMLHttpRequest();
+											req.open('PUT', uploadURL);
+											req.onreadystatechange = function()
+											{
+											document.getElementById('uploadHdr').innerText = 'Upload (request status == ' + req.status + ')';
+											};
+											req.send(fileInput.files[0]);
+											}
+										</script>";
 
+		private String FILE_UPLOADER_HTML = "<hr><h3 id='uploadHdr'>Upload</h3><br>" +
+											"<input id=\"uploader\" type='file' " +
+											"onchange='selectedFileChanged(this,\"{0}\")' /><hr>";
+
+		//  JPEG, PNG, PDF, MP4, TXT, HTML and XML files
 		private string[] CONTENT_TYPES = new string[]{"image/jpeg", "image/png", "application/pdf", "application/mp4", "text/plain", "text/html", "application/xml"};
 		private string[][] CONTENT_FILE_TYPES = new string[][]{new string[]{".jpg", ".jpeg"}, new string[]{".png"}, new string[]{".pdf"}, new string[]{".mp4"}, 
 			new string[]{".txt"}, new string[]{".html"}, new string[]{".xml"}};
 		private const string RESPONSE_FORMAT = 
 							@"<html>
+									{0}
 									 <h1>Folders</h1>
 									 
-									 {0}
+									 {1}
 									 <h1>Files</h1>
-											{1}
+											{2}
 									 <br>
+									 {3}
 							</html>";
 
 		private const string RESPONSE_ENTRY_FORMAT = 
@@ -26,6 +64,8 @@ namespace CS422
 									 <br>";
 
 		private FileSys422 fileSystem;
+
+		private bool uploadAllowed = true;
 
 		public FilesWebService (FileSys422 fs)
 		{
@@ -56,7 +96,15 @@ namespace CS422
 
 		public override void Handler(WebRequest req)
 		{
-			// TODO maybe change this
+			if(req.Method == "PUT"){
+				handlePutRequest(req);
+			}else if(req.Method == "GET"){
+				handleGetRequest(req);
+			}
+        }
+
+        private void handleGetRequest(WebRequest req){
+        	// TODO maybe change this
 			var url = req.RequestTarget.Substring("/files/".Length);
 
 			if (url.Length == 0) {
@@ -93,7 +141,14 @@ namespace CS422
 				req.WriteNotFoundResponse(@"<h1>File not found</h1>");
 			}	
 			Console.WriteLine ("done");
-         }
+        }
+
+
+        private void handlePutRequest(WebRequest req){
+			req.WriteNotFoundResponse(@"<h1>File not found</h1>");
+
+			Console.WriteLine("PUT");
+        } 
 
 		string getPath(Dir422 directory){
 			string path = "";
@@ -109,17 +164,18 @@ namespace CS422
 			return "/files/" + path;
 
 		}
+
 		string BuildDirHTML(Dir422 directory){
 			
 			var root = directory.Name + "/";
 			var files = directory.GetFiles ();
 			var dirs = directory.GetDirs ();
-			Console.WriteLine ("inside build {0} dirs, {1} files",dirs.Count, files.Count);
+			// Console.WriteLine ("inside build {0} dirs, {1} files",dirs.Count, files.Count);
 
 			var dirStr = "";
 			var path = getPath (directory);
-			Console.WriteLine ("-------------------------");
-			Console.WriteLine (path);
+			// Console.WriteLine ("-------------------------");
+			// Console.WriteLine (path);
 
 			foreach (var dir in dirs) {
 				dirStr += String.Format (RESPONSE_ENTRY_FORMAT, path + dir.Name, dir.Name);
@@ -129,7 +185,10 @@ namespace CS422
 				fileStr += String.Format (RESPONSE_ENTRY_FORMAT, path + file.Name, file.Name);
 			}
 
-			return String.Format(RESPONSE_FORMAT, dirStr, fileStr);
+			String fileUploadScript = uploadAllowed ? UPLOAD_SCRIPT: "";
+			String fileUploadHtml = uploadAllowed ? FILE_UPLOADER_HTML: "";
+
+			return String.Format(RESPONSE_FORMAT, fileUploadScript, dirStr, fileStr, fileUploadHtml);
 		}
 
 
