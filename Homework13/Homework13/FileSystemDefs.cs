@@ -97,10 +97,13 @@ namespace CS422
 			public override Stream OpenReadWrite(){
 				try
 				{
+					Console.WriteLine("Inside StdFile: {0}", m_path);
 					return new FileStream(m_path, FileMode.Open, FileAccess.ReadWrite);
 				}
-				catch (Exception)
+				catch (Exception e)
 				{
+					Console.WriteLine(e.Message);
+					Console.WriteLine(e.StackTrace);
 					// The file could not be opened.
 					return null;
 				}
@@ -279,21 +282,19 @@ namespace CS422
 				Console.WriteLine (fileName);
 				return null;
 			}
-
-			File.Create(Path.Combine(m_path, fileName));
-
-			return new StdFSFile (fileName, this);        
+			Console.WriteLine("Here is the path: " + m_path);
+			
+			var fileStream = File.Create(Path.Combine(m_path, fileName));
+			// Console.WriteLine(.ToString());
+			fileStream.Dispose();
+			
+			return new StdFSFile(Path.Combine(m_path, fileName), this);        
 
 		}
 
 		public override Dir422 CreateDir(string dirName){
 			if(!Utilities.isValidFileName(dirName))
 				return null;
-			Console.WriteLine (m_path + ", " + dirName);
-
-			string cwd = Directory.GetCurrentDirectory();
-
-			Directory.CreateDirectory(Path.Combine(m_path, dirName));
 
 			return new StdFSDir (Path.Combine(m_path, dirName), this);        
 

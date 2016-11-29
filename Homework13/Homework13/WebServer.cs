@@ -69,7 +69,7 @@ namespace CS422
 
 				while(true){
 					if(Listener == null){
-						Console.WriteLine("NULLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLL>>>>>>>>>>>>>>>>");
+						Console.WriteLine("NULLLLLL");
 						break;
 					}
 					//Console.WriteLine ("Waiting for client!");
@@ -167,7 +167,6 @@ namespace CS422
 							//check timeout #2
 							var elapsedSeconds = watch.ElapsedMilliseconds / 1000.0;
 
-
 							// check for double crlf timeouts
 							if (elapsedSeconds >= DOUBLE_CRLF_TIMEOUT
 								|| bufferedRequest.Count > DOUBLE_CRLF_DATA_TIMEOUT) {
@@ -241,14 +240,14 @@ namespace CS422
 			string[] firstLine = requestString.Split (CRLF.ToCharArray()) [0].Split(' ');
 			
 			newWebRequest.Method = firstLine[0];
-			Console.WriteLine("Method: {0}", firstLine[0]);
-
+			newWebRequest.MethodArguments = firstLine[1];
+			
 			newWebRequest.HTTPVersion = firstLine[2];
 			newWebRequest.RequestTarget = System.Uri.UnescapeDataString (firstLine [1]);;
 			newWebRequest.Headers = parseHeaders (requestString);
+			
 
 			return newWebRequest;
-
 		}
 
 		static ConcurrentDictionary<string, string> parseHeaders(string request){
@@ -256,6 +255,7 @@ namespace CS422
 				StringSplitOptions.None);
 
 			ConcurrentDictionary<string, string> headers = new ConcurrentDictionary<string, string>();
+			
 			//Console.WriteLine ("Searching for headers");
 			for(int i = 1; i < requestLines.Length; i++){
 				if(requestLines[i]  != ""){

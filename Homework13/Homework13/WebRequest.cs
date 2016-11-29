@@ -13,6 +13,10 @@ namespace CS422
 			get; 
 			set;
 		}
+		public String MethodArguments{
+			get;
+			set;
+		}
 
 		public ConcurrentDictionary<string, string> Headers{
 			get; 

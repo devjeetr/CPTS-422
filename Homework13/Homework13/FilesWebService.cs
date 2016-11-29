@@ -31,6 +31,7 @@ namespace CS422
 											// Create the service request object
 											var req = new XMLHttpRequest();
 											req.open('PUT', uploadURL);
+											console.log(uploadURL);
 											req.onreadystatechange = function()
 											{
 											document.getElementById('uploadHdr').innerText = 'Upload (request status == ' + req.status + ')';
@@ -100,6 +101,7 @@ namespace CS422
 				handlePutRequest(req);
 			}else if(req.Method == "GET"){
 				handleGetRequest(req);
+
 			}
         }
 
@@ -145,9 +147,44 @@ namespace CS422
 
 
         private void handlePutRequest(WebRequest req){
-			req.WriteNotFoundResponse(@"<h1>File not found</h1>");
+			ConcatStream stream = req.Body as ConcatStream;
+			
+			long totalFileSize = stream.Length;
+			Byte[] buf = new Byte[int.MaxValue < totalFileSize ? int.MaxValue : totalFileSize];
+			
+			var root = fileSystem.GetRoot();
+						Console.WriteLine("-1");
+			var path = req.MethodArguments.Replace(@"/files", "");
+		
+			var fileName = Path.GetFileName(path);
+			var dirName = Path.GetDirectoryName(path);
 
-			Console.WriteLine("PUT");
+			var dir = root.GetDir(dirName.Substring(1));
+			var file = dir.GetFile(fileName);
+			
+			if(file != null){
+				throw new ArgumentException();
+			}
+			
+			file = dir.CreateFile(fileName);
+
+			var writeStream = file.OpenReadWrite();
+
+			int byetsRead = 0;
+
+			while(totalFileSize > 0){
+				// Read whatever we can into buff
+				
+				int totalReadSize = stream.Read(buf, 0, Convert.ToInt32(totalFileSize));
+				totalFileSize -= totalReadSize;
+			
+				// now write these bytes to disk
+				Console.WriteLine(totalReadSize);
+				writeStream.Write(buf, 0, totalReadSize);
+			}
+
+			req.WriteHTMLResponse(@"<h1>File uploaded successfully</h1>");			
+			// req.WriteNotFoundResponse(@"<h1>File not found</h1>");
         } 
 
 		string getPath(Dir422 directory){
@@ -186,7 +223,7 @@ namespace CS422
 			}
 
 			String fileUploadScript = uploadAllowed ? UPLOAD_SCRIPT: "";
-			String fileUploadHtml = uploadAllowed ? FILE_UPLOADER_HTML: "";
+			String fileUploadHtml = uploadAllowed ? String.Format(FILE_UPLOADER_HTML, getPath(directory)): "";
 
 			return String.Format(RESPONSE_FORMAT, fileUploadScript, dirStr, fileStr, fileUploadHtml);
 		}
@@ -302,11 +339,9 @@ namespace CS422
 			for (int i = 0; i < CONTENT_FILE_TYPES.Length; i++) {
 				for (int j = 0; j < CONTENT_FILE_TYPES [i].Length; j++) {
 					if (CONTENT_FILE_TYPES [i] [j] == extension) {
-						Console.WriteLine( "{0}, {1}, {2}", CONTENT_FILE_TYPES [i] [j], extension, CONTENT_TYPES[i]);
+						// Console.WriteLine( "{0}, {1}, {2}", CONTENT_FILE_TYPES [i] [j], extension, CONTENT_TYPES[i]);
 						return CONTENT_TYPES [i];
 					}
-
-					//Console.WriteLine ("ola" + CONTENT_FILE_TYPES [i] [j]);
 				}
 			}
 
