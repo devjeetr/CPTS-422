@@ -94,17 +94,16 @@ namespace CS422
 				if(headerKeys.ElementAt (headerKeys.Count () - 1) != "")
 					headers += String.Format (HEADER_FORMAT, headerKeys.ElementAt (headerKeys.Count () - 1), Headers [headerKeys.ElementAt (headerKeys.Count () - 1)]);
 			}
-			Console.WriteLine ("After");
-			Console.WriteLine (headers);
 
-			Console.WriteLine ("Response: \n\n{0}", String.Format (RESPONSE_FORMAT, statusLine, headers, html));
+			// Console.WriteLine ("After");
+			// Console.WriteLine (headers);
+			// Console.WriteLine ("Response: \n\n{0}", String.Format (RESPONSE_FORMAT, statusLine, headers, html));
 
 			byte[] response = System.Text.Encoding.ASCII.GetBytes(String.Format (RESPONSE_FORMAT, statusLine, headers, html));
 
-			Console.WriteLine (response.Length);
+			// Console.WriteLine (response.Length);
 
 			networkStream.Write (response, 0, response.Length);
-
 			return true;
 		}
 
@@ -125,19 +124,19 @@ namespace CS422
 					headers += String.Format (HEADER_FORMAT, headerKeys.ElementAt(i), Headers[headerKeys.ElementAt(i)]);
 			}
 
-			Console.WriteLine (headers);
+			// Console.WriteLine (headers);
 			if (headerKeys.Count () > 0) {
 				if(headerKeys.ElementAt (headerKeys.Count () - 1) != "" && Headers[headerKeys.ElementAt (headerKeys.Count () - 1)].Length > 0)
 					headers += String.Format (HEADER_FORMAT, headerKeys.ElementAt (headerKeys.Count () - 1), Headers [headerKeys.ElementAt (headerKeys.Count () - 1)]);
 			}
-			Console.WriteLine ("After");
-			Console.WriteLine (headers);
+			// Console.WriteLine ("After");
+			// Console.WriteLine (headers);
 
-			Console.WriteLine ("Response: \n\n{0}", String.Format (HEADLESS_RESPONSE_FORMAT, headers, html));
+			// Console.WriteLine ("Response: \n\n{0}", String.Format (HEADLESS_RESPONSE_FORMAT, headers, html));
 
 			byte[] response = System.Text.Encoding.ASCII.GetBytes(String.Format (HEADLESS_RESPONSE_FORMAT, headers, html));
 
-			Console.WriteLine (response.Length);
+			// Console.WriteLine (response.Length);
 
 			networkStream.Write (response, 0, response.Length);
 
@@ -158,7 +157,7 @@ namespace CS422
 			}
 
 		
-			Console.WriteLine(String.Format ("{0}\n{1}", statusLine, headers));
+			// Console.WriteLine(String.Format ("{0}\n{1}", statusLine, headers));
 
 		}
 

@@ -45,9 +45,12 @@ namespace CS422
 											"onchange='selectedFileChanged(this,\"{0}\")' /><hr>";
 
 		//  JPEG, PNG, PDF, MP4, TXT, HTML and XML files
-		private string[] CONTENT_TYPES = new string[]{"image/jpeg", "image/png", "application/pdf", "application/mp4", "text/plain", "text/html", "application/xml"};
-		private string[][] CONTENT_FILE_TYPES = new string[][]{new string[]{".jpg", ".jpeg"}, new string[]{".png"}, new string[]{".pdf"}, new string[]{".mp4"}, 
-			new string[]{".txt"}, new string[]{".html"}, new string[]{".xml"}};
+		private string[] CONTENT_TYPES = new string[]{"image/jpeg", "image/png", 
+														"application/pdf", "application/mp4", "text/plain", 
+														"text/html", "application/xml"};
+		private string[][] CONTENT_FILE_TYPES = new string[][]{new string[]{".jpg", ".jpeg"}, 
+								new string[]{".png"}, new string[]{".pdf"}, new string[]{".mp4"}, 
+								new string[]{".txt"}, new string[]{".html"}, new string[]{".xml"}};
 		private const string RESPONSE_FORMAT = 
 							@"<html>
 									{0}
@@ -80,7 +83,7 @@ namespace CS422
 			if (dirStructure.Length == 1 && dirStructure [0].Length == 0)
 				return fileSystem.GetRoot ();
 
-			Console.WriteLine (dirStructure [0]);
+			// Console.WriteLine (dirStructure [0]);
 			var root = fileSystem.GetRoot ();
 
 			int i = 0;
@@ -101,7 +104,6 @@ namespace CS422
 				handlePutRequest(req);
 			}else if(req.Method == "GET"){
 				handleGetRequest(req);
-
 			}
         }
 
@@ -110,7 +112,7 @@ namespace CS422
 			var url = req.RequestTarget.Substring("/files/".Length);
 
 			if (url.Length == 0) {
-				Console.WriteLine ("Root requested");
+				// Console.WriteLine ("Root requested");
 				req.WriteHTMLResponse (BuildDirHTML (fileSystem.GetRoot()));
 				return;
 			}
@@ -120,22 +122,22 @@ namespace CS422
 			
 			var dir = getParentDir (url);
 
-			Console.WriteLine (url);
+			// Console.WriteLine (url);
 
 			var tokens = url.Split ('/');
 			var fileOrFolderName = tokens [tokens.Length - 1];
 
 			if (dir == null) {
-				Console.WriteLine ("Not found null");
+				// Console.WriteLine ("Not found null");
 				return;
 			}else if (dir.ContainsFile (fileOrFolderName, false)) {
-				Console.WriteLine ("file");
+				// Console.WriteLine ("file");
 
 				SendFile (dir.GetFile (fileOrFolderName), req);
 
 
 			}else if(dir.ContainsDir(fileOrFolderName, false)){
-				Console.WriteLine ("folder: {0}, parent: {1}", fileOrFolderName, dir.GetDir (fileOrFolderName).Name);
+				// Console.WriteLine ("folder: {0}, parent: {1}", fileOrFolderName, dir.GetDir (fileOrFolderName).Name);
 				req.Headers = new System.Collections.Concurrent.ConcurrentDictionary<string, string> ();
 				req.WriteHTMLResponse (BuildDirHTML (dir.GetDir (fileOrFolderName)));
 			}
@@ -148,21 +150,12 @@ namespace CS422
 
         private void handlePutRequest(WebRequest req){
 			ConcatStream stream = req.Body as ConcatStream;
-			Console.WriteLine("1");
-			Console.WriteLine("stream length: {0}, bodyOffset: {1}, ContentLength:", stream.Length, req.bodyOffset);
-			
-			long totalFileSize = stream.Length;
-			
-			Console.WriteLine(totalFileSize);
-			Console.WriteLine("2");
-			
+			long totalFileSize = long.Parse(req.Headers["Content-Length"]);
+
 			Byte[] buf = new Byte[int.MaxValue < totalFileSize ? int.MaxValue : totalFileSize];
-			
 			
 			// Remove base url
 			var path = System.Uri.UnescapeDataString(req.MethodArguments.Replace(@"/files", ""));
-			
-			Console.WriteLine("3");
 			
 			var fileName = Path.GetFileName(path);
 			var dirName = Path.GetDirectoryName(path);
@@ -179,24 +172,22 @@ namespace CS422
 
 			var writeStream = file.OpenReadWrite();
 			
-			// int totalReadSize = stream.Read(buf, 0, Convert.ToInt32(req.bodyOffset));
-			// Console.WriteLine("Total Read Size: {0}", totalReadSize);
-			// while(totalReadSize != req.bodyOffset){
-			// 	totalReadSize += stream.Read(buf, 0, buf.Length);
-			// }
 			int totalReadSize;
 			while(totalFileSize > 0){
 				// Read whatever we can into buff
-				
-				totalReadSize = stream.Read(buf, 0, Convert.ToInt32(buf.Length - stream.Length));
+				long readSize = totalFileSize < buf.Length ? totalFileSize : buf.Length;
+
+				totalReadSize = stream.Read(buf, 0, Convert.ToInt32(readSize));
 				totalFileSize -= totalReadSize;
 				
 				// now write these bytes to disk
-				Console.WriteLine("totalReadSize: {0}, totalFileSize: {1}", totalReadSize, totalFileSize);
-
+				// Console.WriteLine("totalReadSize: {0}, totalFileSize: {1}, read size: {2}", totalReadSize, totalFileSize, readSize);
+				if(totalReadSize <= 0)
+					break;
 				writeStream.Write(buf, 0, totalReadSize);
 			}
 			writeStream.Dispose();
+			writeStream.Close();
 
 			req.WriteHTMLResponse(@"<h1>File uploaded successfully</h1>");			
 			// req.WriteNotFoundResponse(@"<h1>File not found</h1>");
@@ -259,9 +250,7 @@ namespace CS422
 				var range = req.Headers ["Range"];
 				Match match = Regex.Match (range, @".*bytes=([0-9]+)-([0-9]+).*");
 			
-
 				long start = long.Parse(match.Groups [1].Value);
-
 				long end = 0;
 
 				// if end match not found then value remains 0
