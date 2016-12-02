@@ -217,18 +217,34 @@ namespace CS422
 					if (done) {
 						if (bufferedRequest.Count <= 0)
 							return null;
+						
 						// find part of body that has been read already
 						string reqStr = System.Text.ASCIIEncoding.UTF8.GetString (bufferedRequest.ToArray ());
 
 						int index = reqStr.IndexOf(DOUBLE_CRLF);
-						var alreadyReadBody = reqStr.Substring (index + DOUBLE_CRLF.Count());
-						//Console.WriteLine ("Already: {0}", alreadyReadBody);
-						MemoryStream already = new MemoryStream (System.Text.ASCIIEncoding.UTF8.GetBytes(alreadyReadBody));
+						
+						// var alreadyReadBody = reqStr.Substring (index + DOUBLE_CRLF.Count());
+						var alreadyReadBody = reqStr.Substring (0, index + DOUBLE_CRLF.Count());
+						// var alreadyBytes = System.Text.ASCIIEncoding.UTF8.GetBytes(alreadyReadBody);
+						// int alreadyOffset = 
+						var httpHeaderBytes = System.Text.ASCIIEncoding.UTF8.GetBytes(alreadyReadBody);
+
+						// Console.WriteLine ("Already: {0}", alreadyBytes.Length);
+						var alreadyBytes = new byte[bufferedRequest.ToArray().Length - httpHeaderBytes.Length];
+
+						Buffer.BlockCopy(bufferedRequest.ToArray(), httpHeaderBytes.Length, alreadyBytes, 0, alreadyBytes.Length);
+
+						Console.WriteLine("HeaderBytes.length: {0}, alreadyByte.length: {1}", 
+												httpHeaderBytes.Length, alreadyBytes.Length);
+
+						MemoryStream already = new MemoryStream (alreadyBytes);
+						 
 						if (length != -1) {
-							bodyStream = new ConcatStream (already, networkStream, length);		
+							bodyStream = new ConcatStream (already, networkStream, length + alreadyBytes.Length);		
 						} else {
 							bodyStream = new ConcatStream (already, networkStream);	
 						}
+						newWebRequest.bodyOffset = Convert.ToInt32(alreadyBytes.Length);
 					}
 				}
 			}

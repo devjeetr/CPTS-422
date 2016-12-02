@@ -148,40 +148,55 @@ namespace CS422
 
         private void handlePutRequest(WebRequest req){
 			ConcatStream stream = req.Body as ConcatStream;
+			Console.WriteLine("1");
+			Console.WriteLine("stream length: {0}, bodyOffset: {1}, ContentLength:", stream.Length, req.bodyOffset);
 			
 			long totalFileSize = stream.Length;
+			
+			Console.WriteLine(totalFileSize);
+			Console.WriteLine("2");
+			
 			Byte[] buf = new Byte[int.MaxValue < totalFileSize ? int.MaxValue : totalFileSize];
 			
-			var root = fileSystem.GetRoot();
-						Console.WriteLine("-1");
-			var path = req.MethodArguments.Replace(@"/files", "");
-		
+			
+			// Remove base url
+			var path = System.Uri.UnescapeDataString(req.MethodArguments.Replace(@"/files", ""));
+			
+			Console.WriteLine("3");
+			
 			var fileName = Path.GetFileName(path);
 			var dirName = Path.GetDirectoryName(path);
 
-			var dir = root.GetDir(dirName.Substring(1));
+			var dir = fileSystem.GetRoot().GetDir(dirName.Substring(1));
 			var file = dir.GetFile(fileName);
 			
 			if(file != null){
-				throw new ArgumentException();
+				req.WriteResponse("400 BadRequest", "<h1>file exists already!!!!!!!</h1>");
+				return;
 			}
-			
+
 			file = dir.CreateFile(fileName);
 
 			var writeStream = file.OpenReadWrite();
-
-			int byetsRead = 0;
-
+			
+			// int totalReadSize = stream.Read(buf, 0, Convert.ToInt32(req.bodyOffset));
+			// Console.WriteLine("Total Read Size: {0}", totalReadSize);
+			// while(totalReadSize != req.bodyOffset){
+			// 	totalReadSize += stream.Read(buf, 0, buf.Length);
+			// }
+			int totalReadSize;
 			while(totalFileSize > 0){
 				// Read whatever we can into buff
 				
-				int totalReadSize = stream.Read(buf, 0, Convert.ToInt32(totalFileSize));
+				totalReadSize = stream.Read(buf, 0, Convert.ToInt32(buf.Length - stream.Length));
 				totalFileSize -= totalReadSize;
-			
+				
 				// now write these bytes to disk
-				Console.WriteLine(totalReadSize);
+				Console.WriteLine("totalReadSize: {0}, totalFileSize: {1}", totalReadSize, totalFileSize);
+
 				writeStream.Write(buf, 0, totalReadSize);
 			}
+			writeStream.Dispose();
 
 			req.WriteHTMLResponse(@"<h1>File uploaded successfully</h1>");			
 			// req.WriteNotFoundResponse(@"<h1>File not found</h1>");

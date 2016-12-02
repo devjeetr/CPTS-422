@@ -275,8 +275,6 @@ namespace CS422
 
 		// TODO
 		// implement this
-
-
 		public override File422 CreateFile(string fileName){
 			if (!Utilities.isValidFileName (fileName)) {
 				Console.WriteLine (fileName);
@@ -285,9 +283,9 @@ namespace CS422
 			Console.WriteLine("Here is the path: " + m_path);
 			
 			var fileStream = File.Create(Path.Combine(m_path, fileName));
-			// Console.WriteLine(.ToString());
-			fileStream.Dispose();
 			
+			fileStream.Dispose();
+
 			return new StdFSFile(Path.Combine(m_path, fileName), this);        
 
 		}

@@ -38,6 +38,11 @@ namespace CS422
 			set;
 		}
 
+		public int bodyOffset{
+			get;
+			set;
+		}
+
 		private NetworkStream networkStream;
 		private const string NOT_FOUND_STATUS = "404 Not Found";
 		private const string OK_STATUS = "200 OK";

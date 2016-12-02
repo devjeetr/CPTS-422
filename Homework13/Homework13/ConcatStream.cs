@@ -59,7 +59,6 @@ namespace CS422
 			canSeek = first.CanSeek && second.CanSeek;
 			canRead = first.CanRead && second.CanRead;
 			canWrite = first.CanWrite && second.CanWrite;
-
 		}
 
 		// Properties
@@ -81,7 +80,6 @@ namespace CS422
 			if (!lengthSupported)
 				throw new NotSupportedException ();
 
-
 			if (len > A.Length && len <= this.Length) {
 				int seekPosition = Convert.ToInt32 (len - A.Length);
 				B.SetLength (seekPosition);
@@ -92,10 +90,8 @@ namespace CS422
 				if (!fixedLength) {
 					// expand B to new size
 					B.SetLength(len - A.Length);
-				}
-					
+				}	
 			}
-
 			this.length = len;
 		}
 
@@ -138,7 +134,8 @@ namespace CS422
 				throw new NotSupportedException ();
 
 			if (buffer.Length < offset + count) {
-				throw new ArgumentException ();
+				throw new ArgumentException (string.Format("buffer.Length < offset + count, " + 
+				"buffer.length: {0}, offset: {1}, count: {2}", buffer.Length, offset, count));
 			}
 
 			if(lengthSupported && count + Position > Length)
