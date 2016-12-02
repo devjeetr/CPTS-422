@@ -53,7 +53,6 @@ namespace CS422
 
         public static bool Start(int port, int nThreads = 64)
         {
-
             threadPool = new SimpleLockThreadPool(nThreads);
             Listener = new TcpListener(System.Net.IPAddress.Any, port);
             listenerThread = new Thread(ListenProc);
@@ -76,13 +75,10 @@ namespace CS422
                         Console.WriteLine("NULLLLLL");
                         break;
                     }
-                    //Console.WriteLine ("Waiting for client!");
-                    //Console.WriteLine(Listener);
                     TcpClient client = Listener.AcceptTcpClient();
                     client.NoDelay = true;
                     client.Client.NoDelay = true;
 
-                    //Console.WriteLine ("Client accepted!");
                     lock (threadPool)
                     {
                         threadPool.QueueUserWorkItem(ThreadWork, client);
@@ -98,7 +94,6 @@ namespace CS422
 
         public static void Stop()
         {
-
             Terminate();
         }
 
@@ -107,12 +102,11 @@ namespace CS422
         {
             WebRequest newWebRequest = new WebRequest(client.GetStream());
             ConcatStream bodyStream = null;
-
-            Console.WriteLine("Building Request...");
-
-            List<byte> bufferedRequest = new List<byte>();
+            byte[] bufferedRequest = new byte[5000];
+            int offset = 0;
             bool done = false;
             int length = -1;
+            int bytesRead = 0;
 
             while (!done)
             {
@@ -120,45 +114,41 @@ namespace CS422
                 NetworkStream networkStream = client.GetStream();
                 lock (networkStream)
                 {
+
                     networkStream.ReadTimeout = DEFAULT_NETWORK_READ_TIMEOUT;
                     var watch = System.Diagnostics.Stopwatch.StartNew();
 
                     while (true)
                     {
                         // wait till client is available
-                        //while(client.Available != 0){}
-                        int bufferSize = 1024;
-                        int bytesRead = 0;
-                        byte[] buf = new byte[bufferSize];
                         try
                         {
 
                             if (networkStream.DataAvailable)
                             {
                                 // Console.WriteLine("client avail");
-                                int i = networkStream.Read(buf, bytesRead, buf.Length);
+                                int i = networkStream.Read(bufferedRequest, offset, bufferedRequest.Length - offset);
                                 bytesRead += i;
+                                offset += i;
                             }
                         }
-                        catch (TimeoutException e)
+                        catch (TimeoutException)
                         {
-							Console.WriteLine("TimeoutException");
+                            Console.WriteLine("TimeoutException");
 
                             client.Close();
                             watch.Stop();
-                            
-							return null;
-                        }
 
+                            return null;
+                        }
 
                         if (bytesRead > 0)
                         {
-							
-                            bufferedRequest.AddRange(buf);
-                            string request = System.Text.UnicodeEncoding.UTF8.GetString(bufferedRequest.ToArray());
+                            // bufferedRequest.AddRange(buf);
+                            string request = System.Text.UnicodeEncoding.UTF8.GetString(bufferedRequest);
 
                             // check single crlf timeout
-                            if (bufferedRequest.Count > FIRST_CRLF_DATA_TIMEOUT
+                            if (bufferedRequest.Count() > FIRST_CRLF_DATA_TIMEOUT
                                 && !request.Contains(CRLF))
                             {
                                 //time out!!
@@ -172,7 +162,7 @@ namespace CS422
 
                             // check for double crlf timeouts
                             if (elapsedSeconds >= DOUBLE_CRLF_TIMEOUT
-                                || bufferedRequest.Count > DOUBLE_CRLF_DATA_TIMEOUT)
+                                || bufferedRequest.Count() > DOUBLE_CRLF_DATA_TIMEOUT)
                             {
                                 if (!request.Contains(DOUBLE_CRLF))
                                 {
@@ -181,14 +171,14 @@ namespace CS422
                                             elapsedSeconds);
                                     else
                                         Console.WriteLine("Timing out: Double CRLF not found in first {0} bytes",
-                                            bufferedRequest.Count);
+                                            bufferedRequest.Count());
 
                                     return null;
                                 }
 
                             }
 
-                            if (bufferedRequest.Count != 0)
+                            if (bufferedRequest.Count() != 0)
                             {
                                 if (!isValidRequest(bufferedRequest))
                                 {
@@ -200,7 +190,6 @@ namespace CS422
 
                                 if (request.Length >= 4 && request.Contains(DOUBLE_CRLF))
                                 {
-                                    Console.WriteLine("breaking inner");
                                     done = true;
                                     break;
                                 }
@@ -208,8 +197,8 @@ namespace CS422
                         }
                     }
 
-                    var reqString = System.Text.ASCIIEncoding.UTF8.GetString(bufferedRequest.ToArray());
-				
+                    var reqString = System.Text.ASCIIEncoding.UTF8.GetString(bufferedRequest);
+
                     if (length == -1 && reqString.Split(new String[] { CRLF },
                         StringSplitOptions.None).Length > 2)
                     {
@@ -223,55 +212,34 @@ namespace CS422
 
                     if (done)
                     {
-                        if (bufferedRequest.Count <= 0)
+                        if (bufferedRequest.Count() <= 0)
                             return null;
+                        // Array.Re
+                        // Copy to new buffer 
+                        byte[] requestBytes = new byte[bytesRead];
+                        // Buffer.BlockCopy(bufferedRequest, 0, requestBytes, 0, bytesRead);
+                        Array.Resize(ref bufferedRequest, bytesRead);
 
                         // find part of body that has been read already
-                        string reqStr = System.Text.ASCIIEncoding.UTF8.GetString(bufferedRequest.ToArray());
-
+                        string reqStr = System.Text.ASCIIEncoding.UTF8.GetString(bufferedRequest);
                         int index = reqStr.IndexOf(DOUBLE_CRLF);
-						
                         var httpHeaderString = reqStr.Substring(0, index + DOUBLE_CRLF.Count());
                         var httpHeaderBytes = System.Text.ASCIIEncoding.ASCII.GetBytes(httpHeaderString);
-				
                         var alreadyBytes = new byte[bufferedRequest.ToArray().Length - httpHeaderBytes.Length];
 
-                        Buffer.BlockCopy(bufferedRequest.ToArray(), httpHeaderBytes.Length, alreadyBytes, 0, alreadyBytes.Length);
-						// Buffer.BlockCopy(bufferedRequest.ToArray(), )
+                        Buffer.BlockCopy(bufferedRequest, httpHeaderBytes.Length, alreadyBytes, 0, alreadyBytes.Length);
 
-						// TODO
-						// Find out why we need to do this
-						alreadyBytes = new byte[0];
-							
                         MemoryStream already = new MemoryStream(alreadyBytes);
-
                         if (length != -1)
-                        {
-                            // bodyStream = new ConcatStream(already, networkStream, length + already.Length);
-							bodyStream = new ConcatStream(already, networkStream, length );
-                        }
+                            bodyStream = new ConcatStream(already, networkStream, length);
                         else
-                        {
                             bodyStream = new ConcatStream(already, networkStream);
-                        }
-						try{
-							Console.WriteLine(String.Format("Incorrect body stream length: bodyStream.Length: {0}, lenght: {1}", bodyStream.Length, length));
-							
-						} catch(Exception e){
-							Console.WriteLine(e.Message);
-							Console.WriteLine(e.StackTrace);
-						}
-						
-						// if(bodyStream.Length != length){
-						// 	throw new Exception(String.Format("Incorrect body stream length: bodyStream.Length: {0}, lenght: {1}", bodyStream.Length, length));
-						// }
 
-                        newWebRequest.bodyOffset = Convert.ToInt32(alreadyBytes.Length);
                     }
                 }
             }
 
-            string requestString = System.Text.ASCIIEncoding.UTF8.GetString(bufferedRequest.ToArray());
+            string requestString = System.Text.ASCIIEncoding.UTF8.GetString(bufferedRequest);
             // request has been buffered, now build it
             newWebRequest.Body = bodyStream;
 
@@ -279,11 +247,9 @@ namespace CS422
 
             newWebRequest.Method = firstLine[0];
             newWebRequest.MethodArguments = firstLine[1];
-
             newWebRequest.HTTPVersion = firstLine[2];
             newWebRequest.RequestTarget = System.Uri.UnescapeDataString(firstLine[1]); ;
             newWebRequest.Headers = parseHeaders(requestString);
-
 
             return newWebRequest;
         }
@@ -301,31 +267,25 @@ namespace CS422
                 if (requestLines[i] != "")
                 {
                     Regex r = new Regex(HEADER_REGEX_PATTERN);
-
                     Match match = r.Match(requestLines[i]);
                     string header = match.Groups[1].Value;
                     string value = match.Groups[2].Value;
-                    if (!headers.TryAdd(header, value))
-                        Console.WriteLine("Failed to add");
 
                 }
             }
 
-
             return headers;
-
         }
 
         static void Terminate()
         {
-            Console.WriteLine("terminating");
             listenerThread.Abort();
 
             if (Listener != null)
                 Listener.Stop();
+
             Listener = null;
             threadPool.Dispose();
-
             Thread.CurrentThread.Abort();
         }
 
@@ -334,107 +294,74 @@ namespace CS422
             TcpClient client = clientObj as TcpClient;
             while (client.Connected)
             {
-                //Console.WriteLine ("about to build request");
                 WebRequest request = BuildRequest(client);
-
                 processCount++;
-
-                //Console.WriteLine ("process: {0}", processCount);
-                //Console.WriteLine ("Request built");
 
                 if (request == null)
                 {
-                    //Console.WriteLine ("Closing connection");
-
                     client.Close();
                 }
                 else
                 {
-
                     var handlerService = fetchHandler(request);
 
                     if (handlerService == null)
-                    {
-                        //Console.WriteLine ("Handler not found, writing not found response");
                         request.WriteNotFoundResponse("not found");
-                    }
                     else
-                    {
-                        //Console.WriteLine ("Handler found, delegating response");
                         handlerService.Handler(request);
-                    }
-
                 }
-                //Console.WriteLine ("Loopoing");
             }
 
             client.Close();
-            //Console.WriteLine ("Exiting");
         }
 
 
         public static void AddService(WebService service)
         {
-
             services.Add(service);
         }
 
         private static WebService fetchHandler(WebRequest request)
         {
-
             foreach (var service in services)
             {
                 if (request.RequestTarget != null && request.RequestTarget.StartsWith(service.ServiceURI))
                     return service;
             }
-
             return null;
         }
 
-        private static bool isValidRequest(List<byte> requestBytes)
+        private static bool isValidRequest(byte[] requestBytes)
         {
-
-            String request = System.Text.ASCIIEncoding.ASCII.GetString(requestBytes.ToArray());
+            String request = System.Text.ASCIIEncoding.ASCII.GetString(requestBytes);
             request = request.Trim();
             String[] requestLines = request.Split(new String[] { CRLF },
                                                 StringSplitOptions.None);
 
-            // DEBUG
-            // Console.WriteLine ();
-            // Console.WriteLine(request.Length);
-
-            // Console.WriteLine ("first");
             // process first line for request
             if (requestLines.Length >= 1)
             {
-                // Console.WriteLine("2");
-                // Console.WriteLine(requestLines[0]);
                 if (!processFirstLine(requestLines[0]))
                     return false;
             }
-            // Console.WriteLine ("3");
+
             // process headers
             if (requestLines.Length >= 2)
             {
-                // Console.WriteLine ("4");
                 for (int i = 1; i < requestLines.Length; i++)
                 {
-
                     if (requestLines[i] != "")
                     {
                         Regex r = new Regex(HEADER_REGEX_PATTERN);
-                        // Console.WriteLine ("5");
                         if ((!r.IsMatch(requestLines[i])) &&
                             (i < requestLines.Length - 1
                                 && requestLines[i + 1] == ""))
                         {
                             return false;
                         }
-                        //Console.WriteLine ("6");
                     }
                 }
             }
-            // Console.WriteLine ("7");
             return true;
         }
 
