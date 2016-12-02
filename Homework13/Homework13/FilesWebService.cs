@@ -46,7 +46,7 @@ namespace CS422
 
         //  JPEG, PNG, PDF, MP4, TXT, HTML and XML files
         private string[] CONTENT_TYPES = new string[]{"image/jpeg", "image/png",
-                                                        "application/pdf", "application/mp4", "text/plain",
+                                                        "application/pdf", "video/mp4", "text/plain",
                                                         "text/html", "application/xml"};
         private string[][] CONTENT_FILE_TYPES = new string[][]{new string[]{".jpg", ".jpeg"},
                                 new string[]{".png"}, new string[]{".pdf"}, new string[]{".mp4"},
@@ -138,10 +138,8 @@ namespace CS422
             else if (dir.ContainsFile(fileOrFolderName, false))
             {
                 // Console.WriteLine ("file");
-
                 SendFile(dir.GetFile(fileOrFolderName), req);
-
-
+				
             }
             else if (dir.ContainsDir(fileOrFolderName, false))
             {
@@ -226,7 +224,6 @@ namespace CS422
         string BuildDirHTML(Dir422 directory)
         {
 
-            var root = directory.Name + "/";
             var files = directory.GetFiles();
             var dirs = directory.GetDirs();
             // Console.WriteLine ("inside build {0} dirs, {1} files",dirs.Count, files.Count);
@@ -268,6 +265,7 @@ namespace CS422
             // check if request contains range header
             if (req.Headers.ContainsKey("Range"))
             {
+				Console.WriteLine("-----------> Range request");
                 var range = req.Headers["Range"];
                 Match match = Regex.Match(range, @".*bytes=([0-9]+)-([0-9]+).*");
 
@@ -278,107 +276,134 @@ namespace CS422
                 if (match.Groups.Count > 2)
                     end = long.Parse(match.Groups[2].Value);
 
-                SendFileRange(file, start, end, 500, req);
+                SendFileUsingRangeRequest(file, start, end, 500, req);
                 //
             }
             else
             {
                 //replace old headers
-                SendFileRange(file, 0, 0, 500, req);
+                SendFile(file, 500, req);
             }
         }
 
-        void SendFileRange(File422 file, long start, long end, long chunkSize, WebRequest req)
-        {
+
+		void SendFileUsingRangeRequest(File422 file, long start, long end, long chunkSize, WebRequest req) { 
 
             if (end < start)
-                throw new ArgumentException("Invalid start and end range");
+				throw new ArgumentException("Invalid start and end range");
 
-            var fileStream = file.OpenReadOnly();
+			var fileStream = file.OpenReadOnly();
 
-            long fileSize = fileStream.Length;
+			long fileSize = fileStream.Length;
 
-            if (start > end)
-                req.WriteNotFoundResponse("Invalid Range Header Specified");
+			if (start > end)
+				req.WriteNotFoundResponse("Invalid Range Header Specified");
 
-            if (end == 0)
-            {
-                end = fileSize;
-            }
-            req.Headers = new System.Collections.Concurrent.ConcurrentDictionary<string, string>();
+			if (end == 0)
+			{
+				end = fileSize;
+			}
+			req.Headers = new System.Collections.Concurrent.ConcurrentDictionary<string, string>();
 
-            if (end - start + 1 < chunkSize)
-            {
-                // only need to send 1 response
-                string contentType = GetContentType(file.Name);
-                if (contentType != null)
-                    req.Headers["Content-Type"] = contentType;
-                else
-                    req.Headers["Content-Type"] = "text/plain";
-                var fileContents = GetFileRange(fileStream, start, end);
-                req.WriteResponse("206 Partial Content", fileContents);
-
-
-            }
-            else
-            {
-
-                // need to send multiple responses
-                string boundary = "5187ab27335732";
-
-                string contentType = GetContentType(file.Name);
-                if (contentType != null)
-                    req.Headers["Content-Type"] = contentType;
+			if (end - start + 1 < chunkSize)
+			{
+				// only need to send 1 response
+				string contentType = GetContentType(file.Name);
+				if (contentType != null)
+					req.Headers["Content-Type"] = contentType;
+				else
+					req.Headers["Content-Type"] = "text/plain";
+				var fileContents = GetFileRange(fileStream, start, end);
+				req.WriteResponse("206 Partial Content", fileContents);
+			}
+			else
+			{
+				// need to send multiple responses
+				string contentType = GetContentType(file.Name);
+				if (contentType != null)
+					req.Headers["Content-Type"] = contentType;
 
 
-                long offset = start;
-                long sent = 0;
-                req.Headers["Accept-Ranges"] = "bytes";
+				long offset = start;
+				long sent = 0;
+				req.Headers["Accept-Ranges"] = "bytes";
 
-                long sizeToSend = end - start + 1;
+				long sizeToSend = end - start + 1;
 
-                while (sent <= sizeToSend)
-                {
-                    long currentSize = (sizeToSend - sent) < chunkSize ? sizeToSend - sent : chunkSize;
+				while (sent <= sizeToSend)
+				{
+					long currentSize = (sizeToSend - sent) < chunkSize ? sizeToSend - sent : chunkSize;
 
-                    if (offset + currentSize > fileSize)
-                        currentSize = fileSize - offset + 1;
-
-
-                    if (currentSize <= 0)
-                        break;
-                    //Console.WriteLine ("Getting file range [{0}, {1}]", offset, offset + currentSize);
-                    var fileContents = GetFileRange(fileStream, offset, offset + currentSize);
-
-                    req.Headers["Content-Range"] = String.Format("bytes {0}-{1}/{2}", offset, currentSize + offset, sizeToSend);
+					if (offset + currentSize > fileSize)
+						currentSize = fileSize - offset + 1;
 
 
-                    req.WriteResponse("206 PartialContent", fileContents);
+					if (currentSize <= 0)
+						break;
 
-                    offset += currentSize + 1;
-                    sent += currentSize;
-                }
-            }
+					var fileContents = GetFileRange(fileStream, offset, offset + currentSize);
+
+					req.Headers["Content-Range"] = String.Format("bytes {0}-{1}/{2}", offset, currentSize + offset, sizeToSend);
+
+					req.WriteResponse("206 PartialContent", fileContents);
+
+					offset += currentSize + 1;
+					sent += currentSize;
+				}
+			}
+		}
 
 
+        void SendFile(File422 file, long chunkSize, WebRequest req)
+        {
+			int offset = 0;
+			byte[] buffer = new byte[chunkSize];
+
+			Stream fileStream = file.OpenReadOnly();
+			Stream networkStream = req.NetworkStream;
+
+			// Set Content type
+			string contentType = GetContentType(file.Name);
+			if (contentType != null)
+				req.Headers["Content-Type"] = contentType;
+			else
+				req.Headers["Content-Type"] = "text/plain";
 
 
+			// first send headers
+			string headerString = req.getHeaderString((int) fileStream.Length);
+			string responseString = req.getResponseString("200 OK", headerString, "");
+
+			byte[] responseBytes = System.Text.UnicodeEncoding.UTF8.GetBytes(responseString);
+
+			networkStream.Write(responseBytes, 0, responseBytes.Length);
+
+			// now send file
+			while (true) {
+				int bytesRead = fileStream.Read(buffer, 0, buffer.Length);
+
+				if (bytesRead <= 0)
+					break;
+				
+				networkStream.Write(buffer, 0, bytesRead);
+				offset += bytesRead;
+			}
+
+			//networkStream.Flush();
+			networkStream.Close();
+			Console.WriteLine("Done");
         }
 
         string GetContentType(string fileName)
         {
-            Console.WriteLine("Name: {0}", fileName);
             string extension = Path.GetExtension(fileName);
-            //Console.WriteLine ("extension: {0}", extension);
+
             for (int i = 0; i < CONTENT_FILE_TYPES.Length; i++)
             {
                 for (int j = 0; j < CONTENT_FILE_TYPES[i].Length; j++)
                 {
                     if (CONTENT_FILE_TYPES[i][j] == extension)
-                    {
-                        // Console.WriteLine( "{0}, {1}, {2}", CONTENT_FILE_TYPES [i] [j], extension, CONTENT_TYPES[i]);
                         return CONTENT_TYPES[i];
-                    }
                 }
             }
 
@@ -393,11 +418,7 @@ namespace CS422
             if (start + size >= fileStream.Length)
                 size = fileStream.Length - start;
 
-            Console.WriteLine("Size: {0}", size);
-
             byte[] buf = new byte[size];
-
-            Console.WriteLine("Start: {0}", start);
 
             fileStream.Seek(start, SeekOrigin.Begin);
             fileStream.Read(buf, 0, Convert.ToInt32(size));

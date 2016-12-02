@@ -1,0 +1,16 @@
+﻿using System;
+using NUnit.Framework;
+
+namespace Homework13
+{
+	[TestFixture()]
+	public class WebServiceUnitTests
+	{
+		public WebServiceUnitTests()
+		{
+		}
+
+
+
+	}
+}

@@ -239,7 +239,7 @@ namespace CS422
 					
 					Console.WriteLine (Convert.ToInt32 (B.Length - B.Position));
 					B.Write (buffer, Convert.ToInt32(bufferCounter), count);
-				} catch(NotSupportedException e){
+				} catch(NotSupportedException){
 
 
 					B.Write (buffer, Convert.ToInt32(bufferCounter), Convert.ToInt32(B.Length - B.Position));

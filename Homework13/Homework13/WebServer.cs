@@ -54,10 +54,15 @@ namespace CS422
         public static bool Start(int port, int nThreads = 64)
         {
             threadPool = new SimpleLockThreadPool(nThreads);
+            
             Listener = new TcpListener(System.Net.IPAddress.Any, port);
+            
             listenerThread = new Thread(ListenProc);
-            Listener.Start();
+        
 
+
+
+			Listener.Start();
             listenerThread.Start();
 
             return true;
@@ -377,6 +382,7 @@ namespace CS422
 
             return true;
         }
+
         private static bool processFirstLine(String line)
         {
 
