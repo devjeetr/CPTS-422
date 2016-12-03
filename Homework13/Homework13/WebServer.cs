@@ -275,7 +275,7 @@ namespace CS422
                     Match match = r.Match(requestLines[i]);
                     string header = match.Groups[1].Value;
                     string value = match.Groups[2].Value;
-
+					headers[header] = value;
                 }
             }
 

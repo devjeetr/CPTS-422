@@ -34,7 +34,8 @@ namespace CS422
 											console.log(uploadURL);
 											req.onreadystatechange = function()
 											{
-											document.getElementById('uploadHdr').innerText = 'Upload (request status == ' + req.status + ')';
+												document.getElementById('uploadHdr').innerText = 'Upload (request status == ' + req.status + ')';
+												location.reload();
 											};
 											req.send(fileInput.files[0]);
 											}
@@ -63,7 +64,7 @@ namespace CS422
 									 {3}
 							</html>";
 
-		private const int CHUNK_SIZE = 8000;
+		private const int CHUNK_SIZE = 10000 * 20;
 
         private const string RESPONSE_ENTRY_FORMAT =
             @"<a href='{0}'>{1}</a>
@@ -127,8 +128,8 @@ namespace CS422
 
             var dir = getParentDir(url);
 
-            // Console.WriteLine (url);
-
+			//Console.WriteLine ("----------------------->");
+			req.Print();
             var tokens = url.Split('/');
             var fileOrFolderName = tokens[tokens.Length - 1];
 
@@ -141,12 +142,12 @@ namespace CS422
             {
                 // Console.WriteLine ("file");
                 SendFile(dir.GetFile(fileOrFolderName), req);
-				
             }
             else if (dir.ContainsDir(fileOrFolderName, false))
             {
                 // Console.WriteLine ("folder: {0}, parent: {1}", fileOrFolderName, dir.GetDir (fileOrFolderName).Name);
                 req.Headers = new System.Collections.Concurrent.ConcurrentDictionary<string, string>();
+
                 req.WriteHTMLResponse(BuildDirHTML(dir.GetDir(fileOrFolderName)));
             }
             else
@@ -263,62 +264,108 @@ namespace CS422
 
         void SendFile(File422 file, WebRequest req)
         {
-
+			
             // check if request contains range header
             if (req.Headers.ContainsKey("Range"))
             {
-				Console.WriteLine("-----------> Range request");
-                var range = req.Headers["Range"];
-                Match match = Regex.Match(range, @".*bytes=([0-9]+)-([0-9]+).*");
-
-                long start = long.Parse(match.Groups[1].Value);
-                long end = 0;
-
-                // if end match not found then value remains 0
-                if (match.Groups.Count > 2)
-                    end = long.Parse(match.Groups[2].Value);
-
-				SendFileUsingRangeRequest(file, start, end, CHUNK_SIZE, req);
-                //
+				SendFileUsingRangeRequest(file, CHUNK_SIZE, req);
             }
             else
-            {
-                //replace old headers
-				SendFile(file, CHUNK_SIZE, req);
+            {   //replace old headers
+				req.Headers = new System.Collections.Concurrent.ConcurrentDictionary<string, string>();
+
+				//now send
+				SendFileRegular(file, CHUNK_SIZE, req);
             }
         }
 
+		private const string PARTIAL_CONTENT_STATUS_MSG = "206 Partial Content";
 
-		void SendFileUsingRangeRequest(File422 file, long start, long end, long chunkSize, WebRequest req) { 
+		/// <summary>
+		///  
+		/// </summary>
+		/// <param name="request">Request.</param>
+		/// <param name="fileName">File name.</param>
+		/// <param name="sizeToSend">Size to send.</param>
+		void SendPartialContentHeaderResponse(WebRequest request, String fileName, long start, long end, long fileSize) {
+			long sizeToSend = end - start + 1;
 
-            if (end < start)
-				throw new ArgumentException("Invalid start and end range");
+			// Reset request headers
+			request.Headers = new System.Collections.Concurrent.ConcurrentDictionary<string, string>();
 
-			var fileStream = file.OpenReadOnly();
+			// only need to send 1 response
+			string contentType = GetContentType(fileName);
+			if (contentType != null)
+				request.Headers["Content-Type"] = contentType;
+			else
+				request.Headers["Content-Type"] = "text/plain";
+
+			// Set content length
+			request.Headers["Accept-Ranges"] = "bytes";
+			request.Headers["Content-Length"] = String.Format("{0}", sizeToSend);
+			request.Headers["Content-Range"] = String.Format("bytes {0}-{1}/{2}", start, end, fileSize);
+
+			//req.WriteResponse("206 Partial Content", fileContents);
+			string headers = request.getHeaderString(Convert.ToInt32(sizeToSend));
+			string response = request.getResponseString(PARTIAL_CONTENT_STATUS_MSG, headers, "");
+			Console.WriteLine("Response:");
+			Console.WriteLine(response);
+			byte[] httpHeaderBytes = System.Text.UnicodeEncoding.UTF8.GetBytes(response);
+
+			request.NetworkStream.Write(httpHeaderBytes, 0, httpHeaderBytes.Length);
+		}
+
+
+
+
+
+
+
+		private const string INVALID_RANGE_PARTIAL_CONTENT_STATUS = "416 Range Not Satisfiable";
+
+		void SendFileUsingRangeRequest(File422 file, long chunkSize, WebRequest req) { 
+
+			var range = req.Headers["Range"];
+			Match match = Regex.Match(range, @".*bytes=([0-9]+)-([0-9]*)");
+
+			long start = long.Parse(match.Groups[1].Value);
+			long end = -1;
+
+			// if end match not found then value remains 0
+			if (match.Groups.Count > 2 && match.Groups[2].Value.Length > 0)
+				end = long.Parse(match.Groups[2].Value);
+			
+			FileStream fileStream = (System.IO.FileStream)file.OpenReadOnly();
 
 			long fileSize = fileStream.Length;
 
-			if (start > end)
-				req.WriteNotFoundResponse("Invalid Range Header Specified");
+			if (start > end && end > 0)
+				req.WriteResponse(INVALID_RANGE_PARTIAL_CONTENT_STATUS, 
+				                  String.Format("Invalid Range Header Specified: start > end: {0} > {1}", 
+				                                start, end));
 
-			if (end == 0)
+			if (start > fileSize)
+				req.WriteResponse(INVALID_RANGE_PARTIAL_CONTENT_STATUS,
+				                          String.Format("Invalid Range Header Specified: start > fileSize: {0} > {1}", 
+				                                        start, fileSize));
+
+			if (end <= 0)
 			{
-				end = fileSize;
+				end = fileSize - 1;
 			}
-			req.Headers = new System.Collections.Concurrent.ConcurrentDictionary<string, string>();
 
-			if (end - start + 1 < chunkSize)
+			long sizeToSend = end - start + 1;
+
+			if (true)//(sizeToSend  < chunkSize)
 			{
-				// only need to send 1 response
-				string contentType = GetContentType(file.Name);
-				if (contentType != null)
-					req.Headers["Content-Type"] = contentType;
-				else
-					req.Headers["Content-Type"] = "text/plain";
-				var fileContents = GetFileRange(fileStream, start, end);
+				
+				//Send header:
+				SendPartialContentHeaderResponse(req, file.Name, start, end, fileSize);
 
+				// now send file
+				SendFileData(fileStream, chunkSize, req.NetworkStream, start, end);
 
-				req.WriteResponse("206 Partial Content", fileContents);
+				req.NetworkStream.Close();
 			}
 			else
 			{
@@ -331,9 +378,6 @@ namespace CS422
 				long sent = 0;
 				req.Headers["Accept-Ranges"] = "bytes";
 				req.Headers["Content-Range"] = String.Format("bytes {0}-{1}/{2}", start, end, sizeToSend);
-
-				long sizeToSend = end - start + 1;
-
 
 				while (sent <= sizeToSend)
 				{
@@ -348,8 +392,8 @@ namespace CS422
 
 					var fileContents = GetFileRange(fileStream, offset, offset + currentSize);
 
-
-					req.WriteResponse("206 PartialContent", fileContents);
+					//throw new NotImplementedException();
+					//req.WriteResponse("206 PartialContent", fileContents);
 
 					offset += currentSize + 1;
 					sent += currentSize;
@@ -358,12 +402,66 @@ namespace CS422
 		}
 
 
-        void SendFile(File422 file, long chunkSize, WebRequest req)
-        {
-			int offset = 0;
-			byte[] buffer = new byte[chunkSize];
+		void SendFileData(FileStream fileStream, long chunkSize, Stream networkStream, long start, long end) {
 
-			Stream fileStream = file.OpenReadOnly();
+			Console.WriteLine("End: {0}", end);
+			end = end <= 0 ? fileStream.Length - 1 : end;
+
+			int offset = (int)start;
+			
+			long sizeToSend = end - start + 1;
+
+			Console.WriteLine(fileStream.Position);
+			Console.WriteLine("start: {0}, end: {1}, sizeToSend: {2}, offset: {3}", 
+			                  offset, end, sizeToSend, offset);
+			int totalBytesSent = 0;
+
+			byte[] fileData = GetFileRange(fileStream, start, end);
+
+			// now send file
+			while (totalBytesSent < sizeToSend)
+			{
+				long remaining = end - offset + 1;
+
+				if (remaining <= 0)
+					break;
+
+				long currentSizeToRead = remaining < chunkSize ? remaining : chunkSize;
+
+				Console.WriteLine("remaining:D " + remaining);
+				try
+				{
+					networkStream.Write(fileData, totalBytesSent, (int)currentSizeToRead);
+				}
+				catch (IOException e)
+				{
+					Console.WriteLine("exception: ");
+					Console.WriteLine(e.Message);
+					Console.WriteLine("Connection closed by client!!");
+					break;
+				}
+
+				totalBytesSent += (int)currentSizeToRead;
+
+				offset += (int)currentSizeToRead;
+
+				//Console.WriteLine("SendFileData: byetsRead - {0}", bytesRead);
+
+			}
+
+			Console.WriteLine("\n\n\nstart: {0}, end: {1}, sizeToSend: {2}, offset: {3}",
+							  offset, end, sizeToSend, offset);
+			Console.WriteLine("TotalBytes Sent: {0}", totalBytesSent);
+			networkStream.Close();
+		}
+
+		/**
+		 * 
+		 *  Regular file response
+		 * */
+		void SendFileRegular(File422 file, long chunkSize, WebRequest req)
+        {
+			FileStream fileStream = (System.IO.FileStream)file.OpenReadOnly();
 			Stream networkStream = req.NetworkStream;
 
 			// Set Content type
@@ -384,23 +482,10 @@ namespace CS422
 
 			networkStream.Write(responseBytes, 0, responseBytes.Length);
 
-			// now send file
-			while (true) {
-				int bytesRead = fileStream.Read(buffer, 0, buffer.Length);
+			// Now send file data
+			SendFileData(fileStream, chunkSize, networkStream, 0, -1);
 
-				if (bytesRead <= 0)
-					break;
-				try
-				{
-					networkStream.Write(buffer, 0, bytesRead);
-				} catch (IOException) {
-					Console.WriteLine("Connection closed by client!!");
-					break;
-				}
-					offset += bytesRead;
-			}
-
-			//networkStream.Flush();
+			fileStream.Close();
 			networkStream.Close();
 			Console.WriteLine("Done");
         }

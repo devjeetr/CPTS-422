@@ -71,8 +71,8 @@ namespace CS422
         private const string HEADER_FORMAT = "{0}:{1}";
 		private const string CRLF = "\r\n";
 
-        private const string RESPONSE_FORMAT = "{0} {1}\r\n\r\n{2}";
-		private const string BODYLESS_RESPONSE_FORMAT = "{0} {1}\r\n\r\n";
+        private const string RESPONSE_FORMAT = "{0}{1}\r\n\r\n{2}";
+		private const string BODYLESS_RESPONSE_FORMAT = "{0}{1}\r\n\r\n";
         private const string HEADLESS_RESPONSE_FORMAT = "{0}\r\n\r\n{1}";
 
 
@@ -167,11 +167,10 @@ namespace CS422
 
             for (int i = 0; i < headerKeys.Count(); i++)
             {
-                headers += String.Format(HEADER_FORMAT, headerKeys.ElementAt(i), Headers[headerKeys.ElementAt(i)]);
+				headers += String.Format(HEADER_FORMAT, headerKeys.ElementAt(i), Headers[headerKeys.ElementAt(i)]) + CRLF;
             }
 
-            Console.WriteLine(String.Format ("{0}\n{1}", statusLine, headers));
-
+            //Console.WriteLine(String.Format ("{0}\n{1}", statusLine, headers));
         }
 
     }
