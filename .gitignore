@@ -2,6 +2,7 @@
 *.userprefs
 *.usertasks
 
+packages/
 *.exe
 *.mdb
 #Mono Project Files

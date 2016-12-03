@@ -1,0 +1,21 @@
+Graded by T.M.
+
+- Content hosted correctly
+
+- Requesting .jpg causes an exception to be thrown (-2)
+
+- Requesting .png causes an exception to be thrown (-2)
+
+- Requesting .html causes an endless loop (-1)
+
+- Requesting .txt causes an exception to be thrown (-2)
+
+- Requesting .mp4 causes an exception to be thrown (-2)
+
+- No content type returned when requesting .xml (-1)
+
+- Percent encoding ok
+
+- Nested folders don't redirect correctly (-2)
+
+Final score is 8/20
