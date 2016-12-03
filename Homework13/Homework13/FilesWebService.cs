@@ -63,6 +63,8 @@ namespace CS422
 									 {3}
 							</html>";
 
+		private const int CHUNK_SIZE = 8000;
+
         private const string RESPONSE_ENTRY_FORMAT =
             @"<a href='{0}'>{1}</a>
 									 <br>";
@@ -276,13 +278,13 @@ namespace CS422
                 if (match.Groups.Count > 2)
                     end = long.Parse(match.Groups[2].Value);
 
-                SendFileUsingRangeRequest(file, start, end, 500, req);
+				SendFileUsingRangeRequest(file, start, end, CHUNK_SIZE, req);
                 //
             }
             else
             {
                 //replace old headers
-                SendFile(file, 500, req);
+				SendFile(file, CHUNK_SIZE, req);
             }
         }
 
@@ -314,6 +316,8 @@ namespace CS422
 				else
 					req.Headers["Content-Type"] = "text/plain";
 				var fileContents = GetFileRange(fileStream, start, end);
+
+
 				req.WriteResponse("206 Partial Content", fileContents);
 			}
 			else
@@ -322,13 +326,14 @@ namespace CS422
 				string contentType = GetContentType(file.Name);
 				if (contentType != null)
 					req.Headers["Content-Type"] = contentType;
-
-
+				
 				long offset = start;
 				long sent = 0;
 				req.Headers["Accept-Ranges"] = "bytes";
+				req.Headers["Content-Range"] = String.Format("bytes {0}-{1}/{2}", start, end, sizeToSend);
 
 				long sizeToSend = end - start + 1;
+
 
 				while (sent <= sizeToSend)
 				{
@@ -343,7 +348,6 @@ namespace CS422
 
 					var fileContents = GetFileRange(fileStream, offset, offset + currentSize);
 
-					req.Headers["Content-Range"] = String.Format("bytes {0}-{1}/{2}", offset, currentSize + offset, sizeToSend);
 
 					req.WriteResponse("206 PartialContent", fileContents);
 
@@ -364,6 +368,8 @@ namespace CS422
 
 			// Set Content type
 			string contentType = GetContentType(file.Name);
+
+			req.Headers["Accept-Range"] = "bytes";
 			if (contentType != null)
 				req.Headers["Content-Type"] = contentType;
 			else
@@ -384,9 +390,14 @@ namespace CS422
 
 				if (bytesRead <= 0)
 					break;
-				
-				networkStream.Write(buffer, 0, bytesRead);
-				offset += bytesRead;
+				try
+				{
+					networkStream.Write(buffer, 0, bytesRead);
+				} catch (IOException) {
+					Console.WriteLine("Connection closed by client!!");
+					break;
+				}
+					offset += bytesRead;
 			}
 
 			//networkStream.Flush();
@@ -411,7 +422,7 @@ namespace CS422
         }
 
 
-        string GetFileRange(Stream fileStream, long start, long end)
+        byte[] GetFileRange(Stream fileStream, long start, long end)
         {
 
             long size = end - start + 1;
@@ -423,7 +434,7 @@ namespace CS422
             fileStream.Seek(start, SeekOrigin.Begin);
             fileStream.Read(buf, 0, Convert.ToInt32(size));
 
-            return System.Text.Encoding.ASCII.GetString(buf);
+            return buf;
         }
 
 
