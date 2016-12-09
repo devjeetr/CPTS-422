@@ -1,0 +1,20 @@
+
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio 2012
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{708AFE9E-6149-4A88-B9CC-938AB4C5354E}"
+	ProjectSection(SolutionItems) = preProject
+		WebServer.cs = WebServer.cs
+		ConcatStream.cs = ConcatStream.cs
+		WebRequest.cs = WebRequest.cs
+		SimpleLockThreadPool.cs = SimpleLockThreadPool.cs
+		Tests.cs = Tests.cs
+		DemoService.cs = DemoService.cs
+		WebService.cs = WebService.cs
+	EndProjectSection
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+	EndGlobalSection
+EndGlobal

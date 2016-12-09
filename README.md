@@ -1,2 +1,3 @@
-# CPTS-422
-Testing Course
+CS 422 Testing
+
+
